@@ -1,0 +1,5 @@
+This is a package for maintaining a weblog, served from static files
+and modified with a lisp (Hunchentoot) server.
+
+I'm building it to replace my Drupal blog, while maintaining content,
+comments, and URLs.
