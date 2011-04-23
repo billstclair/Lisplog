@@ -22,10 +22,11 @@
 (defun parse-csv-stream (s line-function)
   (loop with escaped = nil
      with in-quote = nil
-     with last-char = nil
+     with last-fun = nil
      with outs = (make-string-output-stream)
-     with line
+     with line = nil
      for char = (read-char s nil :eof)
+     for new-last-fun = nil
      until (eq char :eof)
      do
        (cond ((member char *csv-ignore-characters*))
@@ -38,18 +39,21 @@
                     (t (setf in-quote t))))
              ((not in-quote)
               (cond ((eql char #\newline)
+                     (setf new-last-fun :newline)
                      (funcall line-function (nreverse line))
                      (setf line nil))
                     ((eql char *csv-separator*)
-                     (unless (eql last-char #\")
+                     (setf new-last-fun :delim)
+                     (when (eq last-fun :delim)
                        (push "" line)))
                     (t (error "Missing beginning delimiter"))))
              ((eql char *csv-escape*)
               (setf escaped t))
              (t (write-char char outs)))
-       (setf last-char char)
+       (setf last-fun new-last-fun)
      finally
-       (unless (eql last-char #\newline)
+       (when in-quote (error "File ended with open quote"))
+       (unless (eq last-fun :newline)
          (funcall line-function (nreverse line)))
        (when in-quote (error "Missing closing quote"))))
 
