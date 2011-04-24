@@ -20,6 +20,9 @@
 (defun assqv (key alist)
   (cdr (assq key alist)))
 
+(defun ensure-list (x)
+  (if (listp x) x (list x)))
+
 (define-setf-expander assqv (key alist &environment env)
   (multiple-value-bind (dummies vals stores setter getter)
       (get-setf-expansion alist env)
@@ -43,6 +46,15 @@
 (defun strcat (&rest strings)
   (declare (dynamic-extent strings))
   (apply #'concatenate 'string strings))
+
+(defun make-plist (keys values)
+  (assert (eql (length keys) (length values)))
+  (mapcan 'list keys values))
+
+(defun md5 (string)
+  (let ((digest (md5:md5sum-sequence string)))
+    (format nil "~(~{~2,'0X~}~)" (map 'list #'identity digest))))
+
 
 ;;;
 ;;; Hunchentoot

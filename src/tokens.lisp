@@ -1,32 +1,29 @@
 ; -*- mode: lisp -*-
-(in-package #:cl-user)
 
-(defparameter *lisplog-home*
-  (make-pathname :name nil :type nil
-                 :defaults (or *load-truename* *default-pathname-defaults*)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Tokens, to help prevent typos
+;;;
 
-(pushnew (merge-pathnames "fsdb/" *lisplog-home*)
-         asdf:*central-registry*
-         :test #'equal)
+(in-package :lisplog)
 
-(asdf:defsystem :lisplog
-  :description "Simple blogging in Common Lisp"
-  :author "Bill St. Clair <bill@billstclair.com>"
-  :version "0.01"
-  :license "Apache"
-  :depends-on (fsdb md5 anaphora html-template hunchentoot)
-  :components
-  ((:module src
-    :serial t
-    :components
-    ((:file "package")
-     #+ccl                              ;not needed in other lisps
-     (:file "ccl")
-     (:file "utility")
-     (:file "tokens")
-     (:file "db")
-     (:file "csv")
-     ))))
+(defmacro tokens (&rest syms)
+  `(progn
+     ,@(loop for sym in syms
+          for name = (symbol-name sym)
+          for var = (intern (strcat "$" name))
+          for str = (string-downcase name)
+          collect `(defconstant ,var ,str))))
+
+(tokens
+ config
+ counters
+ nodes
+ comments
+ users
+ moderation
+ templates
+ )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

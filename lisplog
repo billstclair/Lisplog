@@ -1,0 +1,5 @@
+#!/bin/bash
+# Usage is: "lisplog [slimeport]"
+ccl -e '(load "start.lisp")' \
+    -e '(in-package :ll)' \
+    -e "(start-swank $1)"

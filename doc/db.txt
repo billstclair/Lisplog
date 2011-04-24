@@ -1,0 +1,70 @@
+Basic layout of a Lisplog site.
+
+lisp
+  config             ; locations of data and site directories
+
+<data>
+  config             ; alist of mostly-static configuration info
+  counters           ; alist of node, user, comment numbers, etc.
+  nodes
+    <xx>             ; First 2 digits of node number
+      <xx...>        ; alist of info about one post
+  comments
+    <xx>             ; First 2 digits of comment number
+      <xx...>        ; alist of info about comment
+  users
+    <xx>             ; First 2 digits of user ID (an integer)
+      <xx...>        ; alist of info about one user
+  moderation
+    comments
+      <xx>           ; First 2 digits of comment number
+        <xx...>      ; alist for one unapproved comment
+    nodes
+      <xx>
+        <xx...>
+  templates
+    <name>           ; alist of info about one template
+
+; ; Apache points here
+<site>
+  <file> ; Whatever user names things in the nodes, including hierarchy
+
+Properties
+
+nodes
+  :comments          ; list of comment numbers for this post
+  :aliases           ; list of urls for this post
+  :nid               ; node number (file name)
+  :type              ; "blog", "forum", "page", "story", "poll"
+  :title             ; The title of the post
+  :uid               ; user number
+  :status            ; 0 if not posted, 1 if posted
+  :created           ; time of creation
+  :changed           ; time of last change
+  :comment           ; ??
+  :promote           ; ??
+  :moderate          ; ??
+  :teaser            ; Prefix of :body to include on list pages
+  :body              ; post text
+  :revisions         ; ??
+  :sticky            ; 1 if sticks at top of home page
+  :format            ; number for filtered, PHP, unfiltered, raw, convert links
+                     ; Need to figure out the mapping and do some of them
+
+comments (from Drupal)
+  :cid               ; comment number (file name)
+  :pid               ; comment this one is commenting on
+  :nid               ; node commented on
+  :uid               ; user id of commenter
+  :subject           ; subject
+  :comment           ; comment text
+  :hostname          ; IP of commenter
+  :timestamp         ; when
+  :score             ; moderation?
+  :status            ; approved (won't use)
+  :format            ; How to convert text to HTML
+  :thread            ; <indent>.<sequence>/ - I see no need for this
+  :users             ; some serialized PHP - don't use
+  :name              ; commenter's purported name
+  :mail              ; commenter's purported email
+  :homepage          ; commenter's purported homepage

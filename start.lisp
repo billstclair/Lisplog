@@ -8,7 +8,16 @@
   (load "~/quicklisp/setup"))
 
 (ql:quickload "lisplog")
+(ql:quickload "swank")
 
-;; Can't do this inline since *package* is bound by LOAD
-(defun set-package ()
+(defun ll ()
   (swank:set-package :lisplog))
+
+(ll)
+
+(defun start-swank (&optional port)
+  (when port
+    (swank:create-server :port port :dont-close t)))
+
+(defun reload ()
+  (ql:quickload "lisplog"))
