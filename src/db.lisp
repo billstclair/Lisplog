@@ -17,24 +17,25 @@
       (setf file (strcat "0" file)))
     (append (ensure-list dir) subdir (list file))))
 
-(defun node-get (db file &key dir (subdirs-p t))
+(defun node-get (db dir file &key (subdirs-p t))
   (let ((str (apply #'fsdb:db-get db (node-path file dir subdirs-p))))
     (and str (read-from-string str))))
 
-(defun (setf node-get) (alist db file &key dir (subdirs-p t))
+(defun (setf node-get) (alist db dir file &key (subdirs-p t))
   (let ((key (apply #'fsdb:append-db-keys (node-path file dir subdirs-p))))
     (setf (fsdb:db-get db key)
           (with-output-to-string (s) (pprint alist s)))))
 
-(defmacro updating-node ((node-var db file &key dir (subdirs-p t)) &body body)
+;; You have to side-affect the NODE-VAR
+(defmacro updating-node ((node-var db dir file &key (subdirs-p t)) &body body)
   (let ((thunk (gensym "THUNK")))
-    `(flet ((,thunk (,node-var) ,@body))
+    `(flet ((,thunk (,node-var) ,@body ,node-var))
        (call-updating-node #',thunk ,db ,file ,dir ,subdirs-p))))
 
 (defun call-updating-node (thunk db file dir subdirs-p)
-  (let ((node (node-get db file :dir dir :subdirs-p subdirs-p)))
+  (let ((node (node-get db dir file :subdirs-p subdirs-p)))
     (when (setf node (funcall thunk node))
-      (setf (node-get db file :dir dir :subdirs-p subdirs-p) node))))
+      (setf (node-get db dir file :subdirs-p subdirs-p) node))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

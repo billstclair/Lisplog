@@ -1,0 +1,82 @@
+/* Layout from http://almirante.users.sourceforge.net/2-column-css-layout.htm */
+blockquote {
+   background-color: #f0f0f0;
+   border: solid 1px #ccc;
+   margin-left: 20px;
+   margin-right: 20px;
+   padding: 2px;
+   padding-left: 4px;
+}
+#page {
+   width: 100%;
+   background-color: #fff;
+   float: left;
+}
+#header {
+   width: 100%;
+   background-color: #fff;
+   border: solid 1px #eee;
+   border-bottom: none;
+   float: left;
+}
+#header-content {
+   width: 100%;
+}
+#footer {
+   width: 100%;
+   background-color: #fff;
+   border: solid 1px #eee;
+   border-top: none;
+   float: left;
+}
+#footer-content {
+   width: 100%;
+}
+#container {
+   width: 100%;
+   background-color: #fcfcfc;
+   border: solid 1px #eee;
+   float: left;
+}
+
+#left-sidebar {
+   width: 200px;
+   float: left;
+   margin-top: 5px;
+   padding-bottom: 20px;
+}
+#main-content {
+   width: 100%;
+   margin-right: -100%;
+   float: left;
+}
+
+#content-title {
+   margin-left: 200px;
+   background-color: #ccf;
+   font-size: 120%;
+   font-face: bold;
+   padding-left: 10px;
+   font-family: Helvetica, Arial, Lucida, Verdana, sans-serif;
+}
+
+#content-item {
+   margin-left: 200px;
+   margin-right: 5px;
+   padding-left: 10px;
+   font-family: Verdana, Helvetica, Arial, Lucida, sans-serif;
+}
+#sidebar-table {
+}
+#sidebar-column {
+   width: 100%;
+}
+#sidebar-content {
+   /* My favorite pink */
+   background-color: #fff8f8;
+   float: left;
+   color: black;
+   width: 100%;
+   border: solid 1px #ccc;
+   margin: 2px 0px 2px 2px;
+}

@@ -11,19 +11,18 @@
   `(progn
      ,@(loop for sym in syms
           for name = (symbol-name sym)
-          for var = (intern (strcat "$" name))
-          for str = (string-downcase name)
-          collect `(defconstant ,var ,str))))
+          for str = (string-downcase (subseq name 1))
+          collect `(defconstant ,sym ,str)
+          do (assert (eql #\$ (elt name 0))))))
 
-(tokens
- config
- counters
- nodes
- comments
- users
- moderation
- templates
- )
+(tokens $CONFIG
+        $COUNTERS
+        $NODES
+        $COMMENTS
+        $USERS
+        $MODERATION
+        $TEMPLATES
+        )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

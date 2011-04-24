@@ -94,7 +94,7 @@
     (when nid
       (when (equal (getf plist :teaser) (getf plist :body))
         (setf (getf plist :teaser) nil))
-      (setf (node-get db nid :dir $NODES) plist)
+      (setf (node-get db $NODES nid) plist)
       nil)))
 
 ;; (set' db (fsdb:make-fsdb "~/lisplog/data"))
@@ -108,12 +108,11 @@
          (dest (getf plist :dest))
          (node-p (and (stringp src) (eql 0 (search "node/" src)))))
     (when node-p
-      (let* ((node (subseq src 5))
-             (plist (node-get db node :dir $NODES)))
-        (pushnew dest (getf plist :aliases) :test #'equal)
-        (when verbose
-          (format t "~s => ~s~%" node dest))
-        (setf (node-get db node :dir $NODES) plist)))))
+      (let* ((node (subseq src 5)))
+        (updating-node (plist db $NODES node)
+          (when verbose
+            (format t "~s => ~s~%" node dest))
+          (pushnew dest (getf plist :aliases) :test #'equal))))))
 
 ;; Run parse-drupal-node-csv first
 ;; Add url aliases to node files.
@@ -128,10 +127,9 @@
         (nid (getf plist :nid)))
     (when verbose
       (format t "Comment: ~s for node: ~s~%" cid nid))
-    (updating-node (node db nid :dir $NODES)
-      (pushnew cid (getf node :comments))
-      node)
-    (setf (node-get db cid :dir $COMMENTS) plist)))
+    (updating-node (node db $NODES nid)
+      (pushnew cid (getf node :comments)))
+    (setf (node-get db $COMMENTS cid) plist)))
 
 (defun parse-drupal-comments-csv (db &optional file verbose)
   (unless file
@@ -146,9 +144,10 @@
         (let ((name (getf plist :name))
               (mail (getf plist :mail)))
           (format t "~s ~s ~s~%" uid name mail)))
-      (setf (node-get db uid :dir $USERS) plist))))
+      (setf (node-get db $USERS uid) plist))))
 
-;; Had to change "NULL" to nothing. It was not escaped.
+;; Remember to "Replace NULL by" blank, not "NULL", in the
+;; phpMyAdmin export form.
 (defun parse-drupal-users-csv (db &optional file verbose)
   (unless file
     (setf file "users.csv"))
