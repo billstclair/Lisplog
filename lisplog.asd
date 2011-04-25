@@ -20,12 +20,13 @@
     :serial t
     :components
     ((:file "package")
-     #+ccl                              ;not needed in other lisps
-     (:file "ccl")
+     #+ccl
+     (:file "ccl")               ;dev tools, not needed in other lisps
      (:file "utility")
      (:file "tokens")
      (:file "db")
      (:file "csv")
+     (:file "templates")
      ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

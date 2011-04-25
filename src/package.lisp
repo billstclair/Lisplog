@@ -13,6 +13,10 @@
   (:export
    ))
 
+(in-package :lisplog)
+
+(defparameter *lisplog-home*
+  cl-user::*lisplog-home*)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

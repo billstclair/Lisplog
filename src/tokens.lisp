@@ -21,7 +21,11 @@
         $COMMENTS
         $USERS
         $MODERATION
-        $TEMPLATES
+        $STYLES
+        $BLOCKS
+        $SETTINGS
+        $DATA
+        $SITE
         )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
