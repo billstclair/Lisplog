@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>Title</title>
+<title><!-- TMPL_VAR page-title --></title>
 <LINK rel="stylesheet" type="text/css" href="css/layout.css">
 </head>
 <body bgcolor="#fefefe">
@@ -8,32 +8,25 @@
 
    <div id="header">
       <div id="header-content">
-         <center>Header</center>
+        <table>
+          <tr>
+            <td>
+              <a href="<!-- TMPL_VAR  home -->"><img src="<!-- TMPL_VAR site-logo -->"/></a>
+            </td><td>
+              <h1 id="site-name"><!-- TMPL_VAR site-name --></h1>
+              <span id="site-slogan"><!-- TMPL_VAR site-slogan --></span>
+            </td>
+          </tr>
+        </table>
       </div>
    </div>
 
    <div id="container">
       <div id="main-content">
-         <div id="content-title">Content Title</div>
+         <h2 id="content-title"><a href><!-- TMPL_VAR title --></a></h2>
+         <div id="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
          <div id="content-item">
-           <p>Content</p>
-         </div>
-         <div id="content-title">Content Title 2</div>
-         <div id="content-item">
-           <p>Content 2
-             <blockquote>Block quote</blockquote>
-              Text after blockquote.
-           </p>
-         </div>
-         <div id="content-title">Content Title 3</div>
-         <div id="content-item">
-           <p>Content 3</p>
-           <code>Some code</code>
-           <pre>&lt;pre>
-foo
-bar
-bletch
-&lt;/pre></pre>
+           <!-- TMPL_VAR body -->
          </div>
       </div>
 
@@ -56,11 +49,11 @@ bletch
          </tr></table>
       </div>
 
-   </div> <!-- container -->
+   </div> <!--  container  -->
 
    <div id="footer">
       <div id="footer-content">
-         <center>Footer</center>
+         <center style="vertical-align: middle"><!-- TMPL_VAR footer-html --></center>
       </div>
    </div>
 

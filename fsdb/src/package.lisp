@@ -45,6 +45,9 @@
    #:commit-db-wrapper
    #:rollback-db-wrapper
    #:with-db-wrapper
+
+   ;; utility.lisp
+   #:str-replace
    ))
 
 

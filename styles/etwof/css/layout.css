@@ -1,11 +1,17 @@
 /* Layout from http://almirante.users.sourceforge.net/2-column-css-layout.htm */
+
+a, a:link { color: #333; }
+a:hover, a:focus { color: #03f; }
+a:active { color: #606; }
+img {
+   border: none;
+}
 blockquote {
    background-color: #f0f0f0;
    border: solid 1px #ccc;
    margin-left: 20px;
    margin-right: 20px;
-   padding: 2px;
-   padding-left: 4px;
+   padding: 10px;
 }
 #page {
    width: 100%;
@@ -22,20 +28,37 @@ blockquote {
 #header-content {
    width: 100%;
 }
+#site-name {
+   font-size: 2.0em;
+   margin: 0;
+   padding: 0 0 0 10px;
+}
+#site-slogan {
+   color: #999;
+   font-family: Helvetica, Arial, Lucida, Verdana, sans-serif;
+   display: inline;
+   font-weight: bold;
+   font-size: 1.2em;
+   padding: 0 0 0 10px;
+   margin: 0;
+}
 #footer {
    width: 100%;
    background-color: #fff;
    border: solid 1px #eee;
    border-top: none;
    float: left;
+   padding-bottom: 5px;
 }
 #footer-content {
    width: 100%;
 }
 #container {
    width: 100%;
-   background-color: #fcfcfc;
+   /*background-color: #fcfcfc;*/
    border: solid 1px #eee;
+   border-top: none;
+   border-bottom: none;
    float: left;
 }
 
@@ -53,11 +76,25 @@ blockquote {
 
 #content-title {
    margin-left: 200px;
+   margin-bottom: 0;
+   margin-right: 5px;
    background-color: #ccf;
-   font-size: 120%;
-   font-face: bold;
+   font-size: 1.3em;
+   font-weight: bold;
    padding-left: 10px;
    font-family: Helvetica, Arial, Lucida, Verdana, sans-serif;
+}
+#content-title a {
+   text-decoration: none;
+}
+
+#info {
+   margin-left: 200px;
+   margin-right: 5px;
+   color: #999;
+   padding-left: 10px;
+   padding-top: 0;
+   font-size: 0.9em;
 }
 
 #content-item {
@@ -66,6 +103,10 @@ blockquote {
    padding-left: 10px;
    font-family: Verdana, Helvetica, Arial, Lucida, sans-serif;
 }
+#content-item a:visited {
+   color: #777;
+}
+
 #sidebar-table {
 }
 #sidebar-column {

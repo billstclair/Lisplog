@@ -30,7 +30,7 @@
 (defparameter *style-db*
   (fsdb:db-subdir *styles-db* "etwof"))
 
-(defparameter *style-index-file* ".index.html")
+(defparameter *style-index-file* ".index.tmpl")
 
 ;;;
 ;;; Accessing styles and site files
@@ -87,8 +87,108 @@
 (defun call-with-settings (thunk data-db)
   (funcall thunk (read-settings data-db)))
 
+;;;
+;;; Template operations
+;;;
 
+(defun data-get (dir file &key (db *data-db*) (subdirs-p t))
+  (node-get db dir file :subdirs-p subdirs-p))
 
+(defun (setf data-get) (value dir file &key (db *data-db*) (subdirs-p t))
+  (setf (node-get db dir file :subdirs-p subsirs-p) value))
+
+(defun fill-and-print-to-string (template values)
+  (with-output-to-string (stream)
+    (let ((template:*string-modifier* 'identity))
+      (template:fill-and-print-template template values :stream stream))))
+
+(defun fill-templates-in-plist (plist values)
+  (let ((res (copy-list plist)))
+    (loop for tail on (cdr res) by #'cddr
+       for val = (car tail)
+       when (stringp val)
+       do
+         (setf (car tail) (fill-and-print-to-string val values)))
+    res))
+
+(defun unix-time-to-rfc-1123-string (&optional unix-time)
+  (hunchentoot:rfc-1123-date
+   (if unix-time
+       (unix-to-universal-time unix-time)
+       (get-universal-time))))
+
+(defun do-drupal-quotes (str)
+  (fsdb:str-replace
+   "[quote]" "</p><blockquote><p>"
+   (fsdb:str-replace "[/quote]" "</p></blockquote><p>" str)))
+
+(defun do-drupal-line-breaks (str)
+  (with-input-from-string (s str)
+    (with-output-to-string (os)
+      (princ "<p>" os)
+      (do-drupal-line-breaks-internal s os)
+      (princ "</p>" os))))
+
+(defun do-drupal-line-breaks-internal (s os)
+  (loop with last-ch-newline-p = nil
+     for ch = (read-char s nil :eof)
+     until (eq ch :eof)
+     do
+       (cond ((eql ch #\newline)
+              (cond (last-ch-newline-p
+                     (format os "</p>~%~%<p>")
+                     (setf last-ch-newline-p nil))
+                    (t (setf last-ch-newline-p t))))
+             (t (when last-ch-newline-p
+                  (format os "<br/>~&")
+                  (setf last-ch-newline-p nil))
+                (write-char ch os)))))
+
+(defun eliminate-empty-paragraphs (str)
+  (fsdb:str-replace "<p></p>" "" str))
+
+(defun drupal-format (str)
+  (eliminate-empty-paragraphs
+   (do-drupal-line-breaks
+       (do-drupal-quotes str))))
+
+;; This deals with [quote]...[/quote] from Drupal
+(defun do-drupal-formatting (plist)
+  (let ((body (getf plist :body))
+        (teaser (getf plist :teaser)))
+      (when body
+        (setf (getf plist :body) (drupal-format body)))
+      (when teaser
+        (setf (getf plist :teaser) (drupal-format teaser))))
+  plist)
+
+(defun render-node (node &key (*data-db* *data-db*) (*site-db* *site-db*))
+  (with-settings ()
+    (let* ((style (get-setting :style))
+           (style-db (fsdb:db-subdir *styles-db* style))
+           (template (get-style-file *style-index-file* style-db))
+           (plist (data-get $NODES node))
+           (aliases (getf plist :aliases))
+           (status (getf plist :status))
+           (uid (getf plist :uid))
+           (user-plist (data-get $USERS uid)))
+      (assert template nil "No index template for style: ~s" style)
+      (assert node nil "Node does not exist: ~s" node)
+      (when (eql status 1)
+        (dolist (alias aliases)
+          ;; This needs to change based on the path in each alias
+          (setf (getf plist :home) ".")
+          (setf (getf plist :post-date)
+                (unix-time-to-rfc-1123-string (getf plist :created)))
+          (setf (getf plist :author) (getf user-plist :name))
+          (setf plist (do-drupal-formatting plist))
+          (let* ((plist (append
+                         plist
+                         (fill-templates-in-plist *settings* plist)))
+                 (res (fill-and-print-to-string template plist)))
+            (setf (fsdb:db-get *site-db* alias) res)))
+        aliases))))
+           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Copyright 2011 Bill St. Clair
