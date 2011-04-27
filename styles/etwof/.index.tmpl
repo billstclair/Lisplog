@@ -11,7 +11,7 @@
         <table>
           <tr>
             <td>
-              <a href="<!-- TMPL_VAR  home -->"><img src="<!-- TMPL_VAR site-logo -->"/></a>
+              <a href="<!-- TMPL_VAR home -->"><img src="<!-- TMPL_VAR site-logo -->"/></a>
             </td><td>
               <h1 id="site-name"><!-- TMPL_VAR site-name --></h1>
               <span id="site-slogan"><!-- TMPL_VAR site-slogan --></span>
@@ -23,28 +23,22 @@
 
    <div id="container">
       <div id="main-content">
-         <h2 id="content-title"><a href><!-- TMPL_VAR title --></a></h2>
-         <div id="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
-         <div id="content-item">
-           <!-- TMPL_VAR body -->
-         </div>
+         <div id="content-container">
+           <h2 class="content-title"><a href><!-- TMPL_VAR title --></a></h2>
+           <div class="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
+           <div class="content-item">
+             <!-- TMPL_VAR body -->
+           </div>
+        </div>
       </div>
 
       <div id="left-sidebar">
          <table id="sidebar-table"><tr><td id="sidebar-column">
-            <div id="sidebar-content">
-               <center>Sidebar 1<br></center>
+           <!-- TMPL_LOOP blocks -->
+            <div class="sidebar-content">
+               <!-- TMPL_VAR html -->
             </div>
-            <div id="sidebar-content">
-               <center>Sidebar 2<br></center>
-            </div>
-            <div id="sidebar-content">
-               <center>Sidebar 3<br></center>
-            </div>
-            <div id="sidebar-content">
-               <center>Sidebar 4<br></center>
-             </div
-            </div>
+           <!-- /TMPL_LOOP -->
          </td><td width="3px">&nbsp;</td>
          </tr></table>
       </div>

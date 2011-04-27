@@ -102,15 +102,6 @@
     (let ((template:*string-modifier* 'identity))
       (template:fill-and-print-template template values :stream stream))))
 
-(defun fill-templates-in-plist (plist values)
-  (let ((res (copy-list plist)))
-    (loop for tail on (cdr res) by #'cddr
-       for val = (car tail)
-       when (stringp val)
-       do
-         (setf (car tail) (fill-and-print-to-string val values)))
-    res))
-
 (defun unix-time-to-rfc-1123-string (&optional unix-time)
   (hunchentoot:rfc-1123-date
    (if unix-time
@@ -162,6 +153,20 @@
         (setf (getf plist :teaser) (drupal-format teaser))))
   plist)
 
+(defun fill-templates-in-plist (plist values)
+  (let ((res (copy-list plist)))
+    (loop for tail on (cdr res) by #'cddr
+       for val = (car tail)
+       when (stringp val)
+       do
+         (setf (car tail) (fill-and-print-to-string val values)))
+    res))
+
+;; May eventually use more than the HTML property of each block
+(defun get-blocks (&optional (settings *settings*))
+  (loop for block-num in (getf settings :blocks)
+     collect (data-get $BLOCKS block-num)))
+
 (defun render-node (node &key (*data-db* *data-db*) (*site-db* *site-db*))
   (with-settings ()
     (let* ((style (get-setting :style))
@@ -174,18 +179,20 @@
            (user-plist (data-get $USERS uid)))
       (assert template nil "No index template for style: ~s" style)
       (assert node nil "Node does not exist: ~s" node)
+      (setf (getf *settings* :blocks) (get-blocks *settings*))
       (when (eql status 1)
         (dolist (alias aliases)
           ;; This needs to change based on the path in each alias
+          (setf plist (do-drupal-formatting plist))
+          (setf plist (append plist *settings*))
           (setf (getf plist :home) ".")
           (setf (getf plist :post-date)
                 (unix-time-to-rfc-1123-string (getf plist :created)))
           (setf (getf plist :author) (getf user-plist :name))
-          (setf plist (do-drupal-formatting plist))
-          (let* ((plist (append
-                         plist
-                         (fill-templates-in-plist *settings* plist)))
-                 (res (fill-and-print-to-string template plist)))
+          (let* ((res (fill-and-print-to-string template plist)))
+            (loop for new-res = (fill-and-print-to-string res plist)
+               until (equal res new-res)
+               do (setf res new-res))
             (setf (fsdb:db-get *site-db* alias) res)))
         aliases))))
            
