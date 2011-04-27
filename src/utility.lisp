@@ -47,6 +47,9 @@
   (declare (dynamic-extent strings))
   (apply #'concatenate 'string strings))
 
+(defun blankp (x)
+  (or (null x) (equal x "")))
+
 (defun make-plist (keys values)
   (assert (eql (length keys) (length values)))
   (mapcan 'list keys values))

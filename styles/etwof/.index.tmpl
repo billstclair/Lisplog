@@ -24,11 +24,34 @@
    <div id="container">
       <div id="main-content">
          <div id="content-container">
-           <h2 class="content-title"><a href><!-- TMPL_VAR title --></a></h2>
+           <h2 class="content-title">
+             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->">
+               <!-- TMPL_VAR title -->
+             </a>
+           </h2>
            <div class="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
            <div class="content-item">
              <!-- TMPL_VAR body -->
            </div>
+           <!-- TMPL_LOOP comments -->
+           <div class="comment">
+             <h3 class="comment-title">
+               <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#<!-- TMPL_VAR cid -->"
+                  name="<!-- TMPL_VAR cid -->">
+                 <!-- TMPL_VAR subject --></a>
+             </h3>
+             <div class="info">
+               Submitted by
+               <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF -->
+                 <!-- TMPL_VAR name -->
+                 <!-- TMPL_IF homepage --></a><!-- /TMPL_IF -->
+               on <!-- TMPL_VAR post-date -->
+             </div>
+             <div class="comment-content">
+               <!-- TMPL_VAR comment -->
+             </div>
+           </div>
+           <!-- /TMPL_LOOP -->
         </div>
       </div>
 
