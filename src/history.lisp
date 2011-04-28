@@ -333,7 +333,7 @@ as integers."
             (render-template (get-month-template db) plist))
       month-link)))
 
-(defun render-year-page (year &optional (db *data-db*) (site-db *site-db*))
+(defun render-year-page (year &key (db *data-db*) (site-db *site-db*))
   (let ((plist (compute-year-page-plist year db))
         (year-string (princ-to-string year))
         (url (year-url year)))
@@ -343,6 +343,29 @@ as integers."
     (setf (fsdb:db-get site-db url)
           (render-template (get-year-template db) plist))
     url))
+
+(defun render-site (&key (db *data-db*) (site-db *site-db*) (verbose t))
+  (let ((count 0))
+    (macrolet ((rendering (form)
+                 `(loop
+                     (restart-case
+                         (return (maybe-squawk ,form))
+                       (retry-render ()
+                         :report (lambda (stream)
+                                   (format stream "Retry ~A." ',(car form))))))))
+      (flet ((maybe-squawk (x)
+               (when verbose
+                 (format t "~&~s~%" x))))
+        (dolist (year (get-years-before-year nil db))
+          (maybe-squawk (render-year-page year :db db :site-db site-db))
+          (incf count)
+          (dolist (month (get-months-of-year year db))
+            (maybe-squawk (render-month-page year month :db db :site-db site-db))
+            (incf count)
+            (dolist (info (get-month-post-info year month :db db))
+              (maybe-squawk (render-node (car info) :data-db db :site-db site-db))
+              (incf count))))))
+    count))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

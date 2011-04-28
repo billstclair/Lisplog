@@ -205,9 +205,21 @@
            do (setf res new-res))
         res))))
 
-(defun render-node (node &key (*data-db* *data-db*) (*site-db* *site-db*))
+(defun determine-home (alias)
+  (let ((count
+         (length
+          (cdr (pathname-directory (merge-pathnames alias "/" nil))))))
+    (cond ((eql count 0) ".")
+          (t (let ((res ".."))
+               (dotimes (i (1- count))
+                 (setf res (strcat "../" res)))
+               res)))))
+
+(defun render-node (node &key (data-db *data-db*) (site-db *site-db*))
   (with-settings ()
-    (let* ((plist (or (if (listp node) node (data-get $NODES node))
+    (let* ((*data-db* data-db)
+           (*site-db* site-db)
+           (plist (or (if (listp node) node (data-get $NODES node))
                       (error "Node does not exist: ~s" node)))
            (created (getf plist :created))
            (aliases (getf plist :aliases))
@@ -219,7 +231,7 @@
       (when (eql status 1)
         (dolist (alias aliases)
           ;; This needs to change based on the path in each alias
-          (setf (getf plist :home) ".")
+          (setf (getf plist :home) (determine-home alias))
           (setf (getf plist :page-title) (getf plist :title))
           (setf plist (do-drupal-formatting plist))
           (setf plist (append plist history-plist))
@@ -227,7 +239,7 @@
           (setf (getf plist :post-date)
                 (unix-time-to-rfc-1123-string created))
           (setf (getf plist :author) (getf user-plist :name))
-          (setf (getf plist :comments)
+          (setf (getf plist :comment-plists)
                 (fetch-comments (getf plist :comments)))
           (setf (fsdb:db-get *site-db* alias)
                 (render-template post-template-name plist)))
