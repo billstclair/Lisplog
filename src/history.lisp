@@ -134,7 +134,7 @@ as integers."
   (aref *day-names* day))
 
 (defun month-link-and-name (year month)
-  (values (format nil "~d/~2,'0d" year month)
+  (values (format nil "~d-~2,'0d" year month)
           (format nil "~a ~d" (get-month-name month) year)))
                 
 ;; (:months ((:link "2011/04" :name "April 2011")))
@@ -201,6 +201,7 @@ as integers."
        finally (return `(:month ,(format nil "~a ~d"
                                          (get-month-name month)
                                          year)
+                         :link ,(month-link-and-name year month)
                          :days ,days)))))
 
 (defun month-page-node-links (node-num &optional (db *data-db*))
@@ -246,9 +247,8 @@ as integers."
                           (site-db *site-db*))
   (multiple-value-bind (month-link month-name) (month-link-and-name year month)
     (let ((plist (compute-month-page-plist year month db)))
-      (setf (getf plist :page-title) month-name
-            (getf plist :base) "../../")
-      (setf (fsdb:db-get site-db month-link "index.html")
+      (setf (getf plist :page-title) month-name)
+      (setf (fsdb:db-get site-db month-link)
             (render-template (get-month-template db) plist))
       t)))
 

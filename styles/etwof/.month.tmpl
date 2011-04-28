@@ -1,8 +1,7 @@
-<h2 class="month-title"><!-- TMPL_VAR month --></h2><!-- TMPL_LOOP days -->
+<h2 class="month-title"><a href="<!-- TMPL_VAR link -->"><!-- TMPL_VAR month --></a></h2><!-- TMPL_LOOP days -->
 <div class="month-page-day">
   <p class="day-title"><!-- TMPL_VAR date-string --></p><!-- TMPL_LOOP posts -->
   <p class="day-links"><!-- TMPL_LOOP links -->
     <a href="<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a><!-- /TMPL_LOOP -->
   </p><!-- /TMPL_LOOP -->
-</div>
-<!-- /TMPL_LOOP -->
+</div><!-- /TMPL_LOOP -->
