@@ -194,6 +194,7 @@
     (let* ((template (get-style-file template-name))
            (index-template
             (get-style-file (or index-template-name *style-index-file*))))
+      (setf plist (append plist *settings*))
       (unless (getf plist :home) (setf (getf plist :home) "."))
       (setf (getf plist :blocks) (get-blocks))
       (setf (getf plist :page-content)

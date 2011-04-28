@@ -1,5 +1,9 @@
-<!-- TMPL_LOOP months -->
+<h2 class="year-title"><a href="<!-- TMPL_VAR link -->"><!-- TMPL_VAR year --></a></h2><!-- TMPL_LOOP months -->
 <div class="year-page-month">
-  <p class="month-title"><!-- TMPL_VAR month-string --></p>
-  <p class="day-links"><!-- TMPL_LOOP links -->
-    <a href="<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a><!-- /TMPL_LOOP --><!-- /TMPL_LOOP -->
+  <p class="year-page-month-title">
+    <a href="<!-- TMPL_VAR month-link -->"><!-- TMPL_VAR month-name --></a>
+  </p>
+  <p class="year-page-day-links"><!-- TMPL_LOOP day-links -->
+    <a href="<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a>&nbsp;&nbsp;<!-- /TMPL_LOOP -->
+  </p>
+</div><!-- /TMPL_LOOP -->
