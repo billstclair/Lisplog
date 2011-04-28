@@ -27,7 +27,7 @@
      (:file "db")
      (:file "csv")
      (:file "templates")
-     (:file "navigation")
+     (:file "history")
      ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
