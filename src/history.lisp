@@ -143,7 +143,7 @@ as integers."
   (aref *day-names* day))
 
 (defun month-link-and-name (year month)
-  (values (format nil "~d-~2,'0d" year month)
+  (values (format nil "ym-~d-~2,'0d.html" year month)
           (format nil "~a ~d" (get-month-name month) year)))
                 
 (defun get-previous-month (year month &optional (db *data-db*))
@@ -168,9 +168,9 @@ as integers."
          (setf months (nreverse (get-months-of-year year db))))
     (values year (pop months))))
 
-;; ((:link "2001-03" :name "March 2011")
-;;  (:link "2001-04" :name "April 2011")
-;;  (:link "2001-05" :name "May 2011"))
+;; ((:link "ym-2001-03.html" :name "March 2011")
+;;  (:link "ym-2001-04.html" :name "April 2011")
+;;  (:link "ym-2001-05.html" :name "May 2011"))
 (defun compute-month-link-plist (year month &optional (db *data-db*))
   (multiple-value-bind (py pm) (get-previous-month year month db)
     (multiple-value-bind (ny nm) (get-next-month year month db)
@@ -183,14 +183,21 @@ as integers."
           (push-plist year month)
           (push-plist py pm))))))
 
-;; (:months ((:link "2011-04" :name "April 2011") ...))
-;;  :years (2011 2010 2009 2008 2007 2006 2005 2004 2003 2002 2001))
+(defun year-url (year)
+  (format nil "y-~d.html" year))
+
+;; (:months ((:link "2011-04.html" :name "April 2011") ...))
+;;  :years ((:year (:link "y-2011.html" :name "2011")) ...))
 (defun compute-months-and-years-link-plist (year month &optional (db *data-db*))
   (let ((years (get-years-before-year nil db)))
     `(,@(and month
              `(:sidebar-history-months
                ,(compute-month-link-plist year month db)))
-      :sidebar-history-years ,(mapcar (lambda (x) (list :year x)) years))))
+      :sidebar-history-years
+        ,(mapcar (lambda (y)
+                   `(:link ,(year-url y)
+                     :name ,y))
+                 years))))
 
 ;; (:months ((:link "2011-04" :name "April 2011") ...))
 ;;  :years (2011 2010 2009 2008 2007 2006 2005 2004 2003 2002 2001)
@@ -314,7 +321,7 @@ as integers."
                        :year ,year
                        :months ,months))))
 
-(Defun render-month-page (year month &key
+(defun render-month-page (year month &key
                           (db *data-db*)
                           (site-db *site-db*))
   (multiple-value-bind (month-link month-name) (month-link-and-name year month)
@@ -324,18 +331,18 @@ as integers."
       (setf (getf plist :page-title) month-name)
       (setf (fsdb:db-get site-db month-link)
             (render-template (get-month-template db) plist))
-      t)))
+      month-link)))
 
 (defun render-year-page (year &optional (db *data-db*) (site-db *site-db*))
   (let ((plist (compute-year-page-plist year db))
-        (year-string (princ-to-string year)))
+        (year-string (princ-to-string year))
+        (url (year-url year)))
     (setf plist
           (append plist (compute-months-and-years-link-plist year nil db)))
     (setf (getf plist :page-title) year-string)
-    (setf (fsdb:db-get site-db year-string)
+    (setf (fsdb:db-get site-db url)
           (render-template (get-year-template db) plist))
-    t))
-
+    url))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
