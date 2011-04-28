@@ -133,11 +133,15 @@ as integers."
 (defun get-day-name (day)
   (aref *day-names* day))
 
+(defun month-link-and-name (year month)
+  (values (format nil "~d/~2,'0d" year month)
+          (format nil "~a ~d" (get-month-name month) year)))
+                
 ;; (:months ((:link "2011/04" :name "April 2011")))
 ;;  :years (2011 2010 2009 2008 2007 2006 2005 2004 2003 2002 2001)
 ;;  :recent-posts ((:link "post-name.html" :title "Post Name") ...)
 ;; )
-(defun compute-navigation-plist (node-num &key (months 1) (link-count 5) (db *data-db*))
+(defun compute-history-plist (node-num &key (months 1) (link-count 5) (db *data-db*))
   (assert (eql months 1)
           nil
           "Haven't implemented months > 1")
@@ -145,18 +149,20 @@ as integers."
          (time (getf node :created)))
     (when time
       (multiple-value-bind (y m) (decode-ymd time)
-        (let ((month-link (format nil "~d/~2,'0d" y m))
-              (month-name (format nil "~a ~d" (get-month-name m) y))
-              (years (get-years-before-year y db))
-              (posts (get-post-links-before-time link-count time)))
-          `(:months ((:link ,month-link :name ,month-name))
-            :years ,(mapcar (lambda (x) (list :year x)) years)
-            :recent-posts ,posts))))))    
+        (multiple-value-bind (month-link month-name) (month-link-and-name y m)
+          (let ((years (get-years-before-year y db))
+                (posts (get-post-links-before-time link-count time)))
+            `(:months ((:link ,month-link :name ,month-name))
+                      :years ,(mapcar (lambda (x) (list :year x)) years)
+                      :recent-posts ,posts)))))))
 
-(defun get-month-and-year-templates (&optional (db *data-db*))
+(defun get-month-template (&optional (db *data-db*))
   (with-settings (db)
-    (values (or (get-setting :month-template) ".month.html")
-            (or (get-setting :year-template) ".year.html"))))
+    (or (get-setting :month-template) ".month.tmpl")))
+
+(defun get-year-template (&optional (db *data-db*))
+  (with-settings (db)
+    (or (get-setting :year-template) ".year.tmpl")))
 
 (defun day-of-week (year month date &optional as-name-p)
   (let ((day (nth-value 6 (decode-universal-time
@@ -183,11 +189,13 @@ as integers."
     (loop for (date . infos) in day-alist
        for date-string = (format nil "~a, ~d ~d"
                                  (day-of-week year month date t)
-                                 date month)
+                                 date
+                                 (get-month-name month))
        collect `(:date-string ,date-string
                  :posts ,(mapcar
                           (lambda (info)
-                            (month-page-node-links (car info) db))
+                            `(:links
+                              ,(month-page-node-links (car info) db)))
                           infos))
        into days
        finally (return `(:month ,(format nil "~a ~d"
@@ -201,12 +209,12 @@ as integers."
       (let* ((link (car (getf node :aliases)))
              (title (getf node :title))
              (body (getf node :body))
-             (links (extract-html-links body "../../")))
-        `((:link ,(strcat "../../" link) :title ,title)
+             (links (extract-html-links body)))
+        `((:link ,link :title ,title)
           ,@links)))))
 
 ;; ((:link "http://foo.com/bar.html" :title "Bar") ...)
-(defun extract-html-links (html &optional relative-prefix)
+(defun extract-html-links (html)
   (let ((res nil))
     (cl-ppcre:do-scans (ms me rs re
                            "<a .*?href=(?:'(.*?)'|\"(.*?)\").*?>(.*?)</a>"
@@ -216,10 +224,15 @@ as integers."
                           (or (aref rs 0) (aref rs 1))
                           (or (aref re 0) (aref re 1))))
             (title (subseq html (aref rs 2) (aref re 2))))
-        (unless (cl-ppcre:scan "^*?\\w+?\\:\\S+" link)
-          (setf link (strcat relative-prefix link)))
         (push `(:link ,link :title ,title) res)))
     (nreverse res)))
+
+(defun test-month-page-html (year month &optional (db *data-db*))
+  (length
+   (princ
+    (render-template
+     (get-month-template db)
+     (compute-month-page-plist year month db)))))
 
 ;; (:months ((:month-string <date>
 ;;          :links ((:link <link> :title <title>)))))
@@ -228,11 +241,18 @@ as integers."
   year db
   )
 
-(defun update-month-page (year month &optional (db *data-db*))
-  year month db
-  )
+(defun render-month-page (year month &key
+                          (db *data-db*)
+                          (site-db *site-db*))
+  (multiple-value-bind (month-link month-name) (month-link-and-name year month)
+    (let ((plist (compute-month-page-plist year month db)))
+      (setf (getf plist :page-title) month-name
+            (getf plist :base) "../../")
+      (setf (fsdb:db-get site-db month-link "index.html")
+            (render-template (get-month-template db) plist))
+      t)))
 
-(defun update-year-page (year &optional (db *data-db*))
+(defun render-year-page (year &optional (db *data-db*))
   year db
   )
 

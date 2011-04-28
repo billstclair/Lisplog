@@ -1,22 +1,23 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-  <title><!-- TMPL_IF page-title --><!-- TMPL_VAR page-title --> | <!-- TMPL_VAR site-name --><!-- TMPL_ELSE --><!-- TMPL_VAR site-name --> | <!-- TMPL_VAR site-slogan --><!-- /TMPL_IF --></title>
+  <title><!-- TMPL_IF page-title --><!-- TMPL_VAR page-title --> | <!-- TMPL_VAR site-name --><!-- TMPL_ELSE --><!-- TMPL_VAR site-name --> | <!-- TMPL_VAR site-slogan --><!-- /TMPL_IF --></title><!-- TMPL_IF base -->
+  <base href="<!-- TMPL_VAR base -->"/><!-- /TMPL_IF -->
   <meta http-equiv="Content-Style-Type" content="text/css">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <LINK rel="stylesheet" type="text/css" href="css/layout.css">
 </head>
 <body bgcolor="#fefefe">
-<div id="page">
-   <div id="header">
-     <div id="search">
-       <form  method="get" action="http://www.google.com/search">
-         <input type="text" name="q" size="15" maxlength="255" value="">
-         <input type="submit" name="btnG" value="Search">
-         <input type="hidden" name="domains" value="billstclair.com">
-         <input type="hidden" name="sitesearch" value="billstclair.com">
-       </form>
-     </div>
+  <div id="page">
+    <div id="header">
+      <div id="search">
+        <form  method="get" action="http://www.google.com/search">
+          <input type="text" name="q" size="15" maxlength="255" value="">
+          <input type="submit" name="btnG" value="Search">
+          <input type="hidden" name="domains" value="billstclair.com">
+          <input type="hidden" name="sitesearch" value="billstclair.com">
+        </form>
+      </div>
       <div id="header-content">
         <table>
           <tr>
@@ -31,68 +32,37 @@
           </tr>
         </table>
       </div>
-   </div>
+    </div>
 
-   <div id="container">
+    <div id="container">
       <div id="main-content">
-         <div id="content-container">
-           <h2 class="content-title">
-             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
-           </h2>
-           <div class="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
-           <div class="content-item">
-             <!-- TMPL_VAR body -->
-             <p>
-               <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a>
-               <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
-               <a href="<!-- TMPL_VAR home -->/admin/?post">Add post</a>
-             </p>
-           </div>
-           <!-- TMPL_LOOP comments -->
-           <div class="comment">
-             <h3 class="comment-title">
-               <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#comment-<!-- TMPL_VAR cid -->" name="comment-<!-- TMPL_VAR cid -->"><!-- TMPL_VAR subject --></a>
-             </h3>
-             <div class="comment-info">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></div>
-             <div class="comment-content">
-               <!-- TMPL_VAR comment -->
-               <p><a href="<!-- TMPL_VAR home -->/admin/edit?comment=<!-- TMPL_VAR cid -->">Edit comment</a></p>
-             </div>
-           </div>
-           <!-- /TMPL_LOOP -->
-           <!-- TMPL_IF comments --><div class="comment-content">
-             <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a>
-             <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
-             <a href="<!-- TMPL_VAR home -->/admin/?post">Add post</a>
-           </div><!-- /TMPL_IF -->
-           <!-- TMPL_IF recent-posts -->
-           <div id="recent-posts">
-             <p>
-               <b>Previous Posts:</b><br/><!-- TMPL_LOOP recent-posts -->
-               <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a><br/><!-- /TMPL_LOOP -->
-             </p><!-- /TMPL_IF  -->
-           </div>
+        <div id="content-container">
+          <!-- TMPL_VAR page-content -->
         </div>
       </div>
 
       <div id="left-sidebar">
-         <table id="sidebar-table"><tr><td id="sidebar-column">
-           <!-- TMPL_LOOP blocks -->
-            <div class="sidebar-content">
-               <!-- TMPL_VAR html -->
-            </div>
-           <!-- /TMPL_LOOP -->
-         </td><td width="3px">&nbsp;</td>
-         </tr></table>
+        <table id="sidebar-table">
+          <tr>
+            <td id="sidebar-column">
+              <!-- TMPL_LOOP blocks -->
+              <div class="sidebar-content">
+                <!-- TMPL_VAR html -->
+              </div>
+              <!-- /TMPL_LOOP -->
+            </td>
+            <td width="3px">&nbsp;</td>
+          </tr>
+        </table>
       </div>
 
-   </div> <!--  container  -->
+    </div> <!--  container  -->
 
-   <div id="footer">
+    <div id="footer">
       <div id="footer-content">
-         <center style="vertical-align: middle"><!-- TMPL_VAR footer-html --></center>
+        <center style="vertical-align: middle"><!-- TMPL_VAR footer-html --></center>
       </div>
-   </div>
+    </div>
 
-</div> <!-- back -->
+  </div> <!-- back -->
 </body>

@@ -31,13 +31,17 @@
   (fsdb:db-subdir *styles-db* "etwof"))
 
 (defparameter *style-index-file* ".index.tmpl")
+(defparameter *style-post-file* ".post.tmpl")
 
 ;;;
 ;;; Accessing styles and site files
 ;;;
 
-(defun get-style-file (file &optional (style-db *style-db*))
-  (fsdb:db-get style-db file))
+(defun get-style-file (file &optional (db *data-db*))
+  (with-settings (db)
+    (let ((style (get-setting :style)))
+      (or (fsdb:db-get *styles-db* style file)
+          (error "No index template for style: ~s" style)))))
 
 (defun write-site-file (path contents &optional (site-db *site-db*))
   (setf (fsdb:db-get site-db path) contents)
@@ -85,7 +89,7 @@
        (call-with-settings #',thunk ,data-db))))
 
 (defun call-with-settings (thunk data-db)
-  (funcall thunk (read-settings data-db)))
+  (funcall thunk (or *settings* (read-settings data-db))))
 
 ;;;
 ;;; Template operations
@@ -164,7 +168,7 @@
 
 ;; May eventually use more than the HTML property of each block
 (defun get-blocks (&optional (settings *settings*))
-  (loop for block-num in (getf settings :blocks)
+  (loop for block-num in (getf settings :block-nums)
      collect (data-get $BLOCKS block-num)))
 
 (defun fetch-comments (numbers &optional (*data-db* *data-db*))
@@ -183,39 +187,49 @@
          (setf (getf plist :homepage) nil))
      collect plist))
 
+(defun render-template (template-name plist &key
+                        (*data-db* *data-db*) (*site-db* *site-db*)
+                        index-template-name)
+  (with-settings ()
+    (let* ((template (get-style-file template-name))
+           (index-template
+            (get-style-file (or index-template-name *style-index-file*))))
+      (unless (getf plist :home) (setf (getf plist :home) "."))
+      (setf (getf plist :blocks) (get-blocks))
+      (setf (getf plist :page-content)
+            (fill-and-print-to-string template plist))
+      (let* ((res (fill-and-print-to-string index-template plist)))
+        (loop for new-res = (fill-and-print-to-string res plist)
+           until (equal res new-res)
+           do (setf res new-res))
+        res))))
+
 (defun render-node (node &key (*data-db* *data-db*) (*site-db* *site-db*))
   (with-settings ()
-    (let* ((style (get-setting :style))
-           (style-db (fsdb:db-subdir *styles-db* style))
-           (template (get-style-file *style-index-file* style-db))
-           (plist (if (listp node) node (data-get $NODES node)))
+    (let* ((plist (or (if (listp node) node (data-get $NODES node))
+                      (error "Node does not exist: ~s" node)))
            (created (getf plist :created))
            (aliases (getf plist :aliases))
            (status (getf plist :status))
            (uid (getf plist :uid))
-           (navigation-plist (compute-navigation-plist node :link-count 10))
-           (user-plist (data-get $USERS uid)))
-      (assert template nil "No index template for style: ~s" style)
-      (assert node nil "Node does not exist: ~s" node)
-      (setf (getf *settings* :blocks) (get-blocks *settings*))
+           (history-plist (compute-history-plist node :link-count 10))
+           (user-plist (data-get $USERS uid))
+           (post-template-name (or (get-setting :post-template) *style-post-file*)))
       (when (eql status 1)
         (dolist (alias aliases)
           ;; This needs to change based on the path in each alias
           (setf (getf plist :home) ".")
           (setf (getf plist :page-title) (getf plist :title))
           (setf plist (do-drupal-formatting plist))
-          (setf plist (append plist navigation-plist *settings*))
+          (setf plist (append plist history-plist))
           (setf (getf plist :permalink) alias)
           (setf (getf plist :post-date)
                 (unix-time-to-rfc-1123-string created))
           (setf (getf plist :author) (getf user-plist :name))
           (setf (getf plist :comments)
                 (fetch-comments (getf plist :comments)))
-          (let* ((res (fill-and-print-to-string template plist)))
-            (loop for new-res = (fill-and-print-to-string res plist)
-               until (equal res new-res)
-               do (setf res new-res))
-            (setf (fsdb:db-get *site-db* alias) res)))
+          (setf (fsdb:db-get *site-db* alias)
+                (render-template post-template-name plist)))
         aliases))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
