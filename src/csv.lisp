@@ -167,6 +167,8 @@
   (parse-drupal-comments-csv db)
   (format t " Done.~%Parsing users...")
   (parse-drupal-users-csv db)
+  (format t " Done.~%Indexing years...")
+  (index-years db)
   (format t " Done.~%")
   db)
 

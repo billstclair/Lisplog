@@ -1,20 +1,32 @@
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<title><!-- TMPL_VAR page-title --></title>
-<LINK rel="stylesheet" type="text/css" href="css/layout.css">
+  <title><!-- TMPL_IF page-title --><!-- TMPL_VAR page-title --> | <!-- TMPL_VAR site-name --><!-- TMPL_ELSE --><!-- TMPL_VAR site-name --> | <!-- TMPL_VAR site-slogan --><!-- /TMPL_IF --></title>
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <LINK rel="stylesheet" type="text/css" href="css/layout.css">
 </head>
 <body bgcolor="#fefefe">
 <div id="page">
-
    <div id="header">
+     <div id="search">
+       <form  method="get" action="http://www.google.com/search">
+         <input type="text" name="q" size="15" maxlength="255" value="">
+         <input type="submit" name="btnG" value="Search">
+         <input type="hidden" name="domains" value="billstclair.com">
+         <input type="hidden" name="sitesearch" value="billstclair.com">
+       </form>
+     </div>
       <div id="header-content">
         <table>
           <tr>
             <td>
               <a href="<!-- TMPL_VAR home -->"><img src="<!-- TMPL_VAR site-logo -->"/></a>
             </td><td>
-              <h1 id="site-name"><!-- TMPL_VAR site-name --></h1>
-              <span id="site-slogan"><!-- TMPL_VAR site-slogan --></span>
+              <div class="site-name">
+                <h1 id="site-name"><!-- TMPL_VAR site-name --></h1>
+                <span id="site-slogan"><!-- TMPL_VAR site-slogan --></span>
+              </div>
             </td>
           </tr>
         </table>
@@ -36,12 +48,21 @@
              <h3 class="comment-title">
                <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#comment-<!-- TMPL_VAR cid -->" name="comment-<!-- TMPL_VAR cid -->"><!-- TMPL_VAR subject --></a>
              </h3>
-             <div class="info">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></div>
+             <div class="comment-info">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></div>
              <div class="comment-content">
                <!-- TMPL_VAR comment -->
              </div>
            </div>
            <!-- /TMPL_LOOP -->
+           <!-- TMPL_IF recent-posts -->
+           <div id="recent-posts">
+             <p><b>Previous Posts:</b><br/>
+             <!-- TMPL_LOOP recent-posts -->
+             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a><br/>
+             <!-- /TMPL_LOOP -->
+             </p>
+             <!-- /TMPL_IF  -->
+           </div>
         </div>
       </div>
 

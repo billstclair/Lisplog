@@ -3,6 +3,7 @@
 a, a:link { color: #333; }
 a:hover, a:focus { color: #03f; }
 a:active { color: #606; }
+
 img {
    border: none;
 }
@@ -28,18 +29,24 @@ blockquote {
 #header-content {
    width: 100%;
 }
+#search {
+   float: right;
+   margin: 0;
+   padding: 0;
+}
+.site-name {
+   padding: 0 0 0 10px;
+}
 #site-name {
    font-size: 2.0em;
    margin: 0;
-   padding: 0 0 0 10px;
 }
 #site-slogan {
    color: #999;
    font-family: Helvetica, Arial, Lucida, Verdana, sans-serif;
    display: inline;
    font-weight: bold;
-   font-size: 1.2em;
-   padding: 0 0 0 10px;
+   font-size: 1.0em;
    margin: 0;
 }
 #footer {
@@ -77,6 +84,7 @@ blockquote {
 #content-container {
    margin-left: 176px;
    padding-left: 10px;
+   font-family: Verdana, Helvetica, Arial, Lucida, sans-serif;
 }
 
 .content-title {
@@ -103,10 +111,30 @@ blockquote {
 .content-item {
    margin-right: 5px;
    padding-left: 10px;
-   font-family: Verdana, Helvetica, Arial, Lucida, sans-serif;
 }
 .content-item a:visited {
    color: #777;
+}
+
+.comment {
+   margin: 10px 20px 10px 20px;
+   padding-left: 10px;
+   padding-right: 10px;
+   border: solid 1px #ccc;
+   font-size: 90%;
+}
+
+.comment-title {
+   margin-bottom: 0;
+}
+.comment-info {
+   margin-right: 5px;
+   color: #999;
+   padding-top: 0;
+   font-size: 0.9em;
+}
+.comment-title a {
+   text-decoration: none;
 }
 
 #sidebar-table {
@@ -118,11 +146,12 @@ blockquote {
    /* My favorite pink */
    background-color: #fff8f8;
    float: left;
-   color: black;
+   color: #555;
    width: 100%;
    border: solid 1px #ccc;
    margin: 2px 0px 2px 2px;
    padding: 2px 5px 2px 5px;
+   font-family: Verdana, Helvetica, Arial, Lucida, sans-serif;
 }
 .sidebar-content hr {
   width: 70%;
@@ -130,6 +159,22 @@ blockquote {
 .sidebar-menu ul {
    list-style-type: square;
 }
+.sidebar-menu a {
+   text-decoration: none;
+}
 .sidebar-menu {
    margin-left: 10px;
+   margin-top: 0;
+   margin-bottom: 0px;
+   font-size: 90%;
+}
+.sidebar-banners {
+   text-align: center;
+}
+.sidebar-banner {
+   margin-top: 3px;
+   margin-bottom: 3px;
+}
+.quotes {
+   font-size: 80%;
 }
