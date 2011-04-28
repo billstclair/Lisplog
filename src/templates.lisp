@@ -225,6 +225,7 @@
            (aliases (getf plist :aliases))
            (status (getf plist :status))
            (uid (getf plist :uid))
+           (format (getf plist :format))
            (history-plist (compute-history-plist node :link-count 10))
            (user-plist (data-get $USERS uid))
            (post-template-name (or (get-setting :post-template) *style-post-file*)))
@@ -233,7 +234,8 @@
           ;; This needs to change based on the path in each alias
           (setf (getf plist :home) (determine-home alias))
           (setf (getf plist :page-title) (getf plist :title))
-          (setf plist (do-drupal-formatting plist))
+          (unless (eql format 6)
+            (setf plist (do-drupal-formatting plist)))
           (setf plist (append plist history-plist))
           (setf (getf plist :permalink) alias)
           (setf (getf plist :post-date)
