@@ -42,6 +42,10 @@
            <div class="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
            <div class="content-item">
              <!-- TMPL_VAR body -->
+             <p>
+               <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a>
+               <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
+             </p>
            </div>
            <!-- TMPL_LOOP comments -->
            <div class="comment">
@@ -51,9 +55,16 @@
              <div class="comment-info">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></div>
              <div class="comment-content">
                <!-- TMPL_VAR comment -->
+               <p><a href="<!-- TMPL_VAR home -->/admin/edit?comment=<!-- TMPL_VAR cid -->">Edit comment</a></p>
              </div>
            </div>
            <!-- /TMPL_LOOP -->
+           <!-- TMPL_IF comments -->
+           <div class="comment-content">
+             <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a>
+             <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
+           </div>
+           <!-- /TMPL_IF -->
            <!-- TMPL_IF recent-posts -->
            <div id="recent-posts">
              <p><b>Previous Posts:</b><br/>

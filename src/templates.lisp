@@ -188,7 +188,7 @@
     (let* ((style (get-setting :style))
            (style-db (fsdb:db-subdir *styles-db* style))
            (template (get-style-file *style-index-file* style-db))
-           (plist (data-get $NODES node))
+           (plist (if (listp node) node (data-get $NODES node)))
            (created (getf plist :created))
            (aliases (getf plist :aliases))
            (status (getf plist :status))
