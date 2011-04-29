@@ -1,0 +1,38 @@
+home page. 10 latest posts.
+
+Rename alias or quote posts.
+
+Check out spam comments. Are they in the live site, or do I need to check
+a flag somewhere?
+
+interwiki
+  [foo:] => <a href="<lookup foo>">foo</a>
+  [foo:bar] => <a href="<lookup foo>">bar</a>
+
+[quote person]
+
+Open up the spacing. Too constricted.
+Find a better font.
+
+Dynamic server
+==============
+
+Login/Permissions (initially just administrator and existing logins)
+Re-render subsets of the site or while site.
+Dynamic serving. Is it faster? Is it faster if I preload the data?
+
+Edit/Create posts
+Edit/Create comments
+Locking
+ctrl-shift-Q javascript to enter blockquote
+ctrl-shift-T javascript to enter TMPL_VAR
+  Disable TMPL_xxx comments for non-posters.
+
+CAPTCHA
+Comment moderation.
+Apache redirect for admin/
+
+Go LIVE!
+
+New users/moderation
+Change/initialize settings

@@ -31,7 +31,10 @@
 ;; Then we'll be able to view them in the admin interface.
 (defun decode-ymd (unix-time)
   (multiple-value-bind (s min h d m y)
-      (decode-universal-time (unix-to-universal-time unix-time))
+      (decode-universal-time
+       (if unix-time
+           (unix-to-universal-time unix-time)
+           (get-universal-time)))
     (declare (ignore s min h))
     (values y m d)))
 
@@ -100,8 +103,8 @@ as integers."
                res)))))
 
 ;; ((:link "post-name.html" :title "Post Name") ...)
-(defun get-post-links-before-time (count unix-time &optional (db *data-db*))
-  (let ((res nil)
+(defun get-node-nums-before-time (count unix-time &optional (db *data-db*))
+  (let ((node-nums nil)
         (cnt 0))
     (block outer
       (multiple-value-bind (y m) (decode-ymd unix-time)
@@ -109,16 +112,19 @@ as integers."
           (dolist (month (get-months-of-year year db))
             (when (or (<= year y) (<= month m))
               (dolist (info (get-month-post-info year month :db db))
-                (when (< (cdr info) unix-time)
-                  (push info res)
+                (when (or (null unix-time) (< (cdr info) unix-time))
+                  (push (car info) node-nums)
                   (incf cnt)
                   (when (>= cnt count) (return-from outer)))))))))
-    (loop for (node-num . time) in (nreverse res)
-       for node = (and (< time unix-time) (data-get $NODES node-num))
-       when node
-       collect `(:link ,(car (getf node :aliases))
-                 :title ,(getf node :title)
-                 :node ,node-num))))
+    (nreverse node-nums)))
+
+(defun get-post-links-before-time (count unix-time &optional (db *data-db*))
+  (loop for node-num in (get-node-nums-before-time count unix-time db)
+     for node = (data-get $NODES node-num)
+     when node
+     collect `(:link ,(car (getf node :aliases))
+                     :title ,(getf node :title)
+                     :node ,node-num)))
 
 (defparameter *month-names*
   #("January"
@@ -203,14 +209,17 @@ as integers."
 ;;  :years (2011 2010 2009 2008 2007 2006 2005 2004 2003 2002 2001)
 ;;  :recent-posts ((:link "post-name.html" :title "Post Name") ...)
 ;; )
-(defun compute-history-plist (node-num &key (link-count 5) (db *data-db*))
-  (let* ((node (data-get $NODES node-num :db db))
-         (time (getf node :created)))
-    (when time
-      (multiple-value-bind (y m) (decode-ymd time)
-        (let ((posts (get-post-links-before-time link-count time)))
-          `(,@(compute-months-and-years-link-plist y m db)
-            :recent-posts ,posts))))))
+(defun compute-history-plist (node-num &optional (db *data-db*))
+  (with-settings (db)
+    (let* ((node (data-get $NODES node-num :db db))
+           (time (getf node :created))
+           (link-count (or (get-setting :previous-post-count)
+                           10)))
+      (when time
+        (multiple-value-bind (y m) (decode-ymd time)
+          (let ((posts (get-post-links-before-time link-count time)))
+            `(,@(compute-months-and-years-link-plist y m db)
+                :recent-posts ,posts)))))))
 
 (defun get-month-template (&optional (db *data-db*))
   (with-settings (db)
@@ -357,14 +366,15 @@ as integers."
                (when verbose
                  (format t "~&~s~%" x))))
         (dolist (year (get-years-before-year nil db))
-          (maybe-squawk (render-year-page year :db db :site-db site-db))
+          (rendering (render-year-page year :db db :site-db site-db))
           (incf count)
           (dolist (month (get-months-of-year year db))
-            (maybe-squawk (render-month-page year month :db db :site-db site-db))
+            (rendering (render-month-page year month :db db :site-db site-db))
             (incf count)
             (dolist (info (get-month-post-info year month :db db))
-              (maybe-squawk (render-node (car info) :data-db db :site-db site-db))
-              (incf count))))))
+              (rendering (render-node (car info) :data-db db :site-db site-db))
+              (incf count))))
+        (rendering (render-site-index :data-db db :site-db site-db))))
     count))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

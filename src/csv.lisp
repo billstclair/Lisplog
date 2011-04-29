@@ -153,6 +153,17 @@
     (setf file "users.csv"))
   (parse-drupal-csv file db :uid 'store-drupal-users-line verbose))
 
+(defun store-drupal-interwiki-line (plist db &optional verbose-p)
+  (let ((key (getf plist :iw_prefix)))
+    (when verbose-p (print plist))
+    (unless (blankp key)
+      (setf (node-get db $INTERWIKI key :subdirs-p nil) plist))))
+
+(defun parse-drupal-interwiki-csv (db &optional file verbose-p)
+  (unless file
+    (setf file "interwiki.csv"))
+  (parse-drupal-csv file db :iw_prefix 'store-drupal-interwiki-line verbose-p))
+
 ;; This gets enough to make the main site.
 ;; Still need to add the categories and the aggregator,
 ;; but I'm going to start with this.
