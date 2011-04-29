@@ -1,6 +1,6 @@
-home page. 10 latest posts.
+Don't show comments on index page, just "n comments"
 
-Rename alias or quote posts.
+Rename alias on quote posts.
 
 Check out spam comments. Are they in the live site, or do I need to check
 a flag somewhere?

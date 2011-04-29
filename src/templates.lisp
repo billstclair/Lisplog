@@ -214,7 +214,7 @@
                  (setf res (strcat "../" res)))
                res)))))
 
-(defun make-node-plist (node &key (data-db *data-db*))
+(defun make-node-plist (node &key (comments-p t) (data-db *data-db*))
   (with-settings ()
     (let* ((plist (or (if (listp node) node (data-get $NODES node :db data-db))
                       (error "Node does not exist: ~s" node)))
@@ -224,14 +224,16 @@
            (format (getf plist :format))
            (user-plist (data-get $USERS uid :db data-db)))
       (when (eql status 1)
-        (setf (getf plist :page-title) (getf plist :title))
         (unless (eql format 6)
           (setf plist (do-drupal-formatting plist)))
         (setf (getf plist :post-date)
               (unix-time-to-rfc-1123-string created))
         (setf (getf plist :author) (getf user-plist :name))
-        (setf (getf plist :comment-plists)
-              (fetch-comments (getf plist :comments) data-db))
+        (when comments-p
+          (let ((comment-plists (fetch-comments (getf plist :comments) data-db)))
+            (setf (getf plist :comment-plists) comment-plists
+                  ;; Note :count-comments here and :comment-count below
+                  (getf plist :count-comments) (length comment-plists))))
         plist))))
 
 (defun get-post-template-name (&optional (db *data-db*))
@@ -246,6 +248,7 @@
       (when plist
         (setf plist `(:posts
                       (,plist)
+                      :page-title ,(getf plist :title)
                       ,@(compute-history-plist node data-db)))
         (dolist (alias aliases)
           ;; This needs to change based on the path in each alias
@@ -255,28 +258,34 @@
                 (render-template post-template-name plist :data-db data-db)))
         aliases))))
 
-(defun render-site-index (&key (data-db *data-db*) (site-db *site-db*))
-  (with-settings ()
+(defun get-node-plists-for-index-page (&optional (db *data-db*))
+  (with-settings (db)
     (let* ((post-count (get-setting :home-page-post-count))
-           (post-template-name (get-post-template-name data-db))
-           (node-nums (get-node-nums-before-time post-count nil data-db))
-           (node-plists (mapcar (lambda (node)
-                                  (let ((plist (make-node-plist
-                                                node :data-db data-db)))
-                                    (setf (getf plist :permalink)
-                                          (car (getf plist :aliases)))
-                                    plist))
-                                node-nums))
-           (plist `(:posts
-                    ,node-plists
-                    ,@(multiple-value-bind (y m)
-                         (decode-ym (getf (car node-plists) :created))
-                       (compute-months-and-years-link-plist y m data-db))))
-           (file-name "index.html"))
-      (setf (getf plist :home) ".")
-      (setf (fsdb:db-get site-db file-name)
-            (render-template post-template-name plist :data-db data-db))
-      file-name)))
+           (node-nums (get-node-nums-before-time post-count nil db)))
+      (flet ((get-node-plist (node-num)
+               (let* ((plist (make-node-plist node-num :comments-p nil :data-db db)))
+                 (setf (getf plist :permalink) (car (getf plist :aliases)))
+                 (awhen (getf plist :comments)
+                   (let ((cnt (length it)))
+                     (setf (getf plist :comment-count)
+                           (if (eq cnt 1)
+                               "1 comment"
+                               (format nil "~d comments" cnt)))))
+                 plist)))
+        (mapcar #'get-node-plist node-nums)))))
+
+(defun render-site-index (&key (data-db *data-db*) (site-db *site-db*))
+  (let* ((node-plists (get-node-plists-for-index-page data-db))
+         (my-links (multiple-value-bind (y m)
+                       (decode-ym (getf (car node-plists) :created))
+                     (compute-months-and-years-link-plist y m data-db)))
+         (plist `(:posts ,node-plists ,@my-links))
+         (post-template-name (get-post-template-name data-db))
+         (file-name "index.html"))
+    (setf (getf plist :home) ".")
+    (setf (fsdb:db-get site-db file-name)
+          (render-template post-template-name plist :data-db data-db))
+    file-name))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
