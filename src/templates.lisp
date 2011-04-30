@@ -101,6 +101,24 @@
 (defun (setf data-get) (value dir file &key (db *data-db*) (subdirs-p t))
   (setf (node-get db dir file :subdirs-p subdirs-p) value))
 
+(defun read-node (node &optional (db *data-db*))
+  (node-get db $NODES node))
+
+(defun (setf read-node) (plist node &optional (db *data-db*))
+  (setf (node-get db $NODES node) plist))
+
+(defun read-comment (comment &optional (db *data-db*))
+  (node-get db $COMMENTS comment))
+
+(defun (setf read-comment) (plist comment &optional (db *data-db*))
+  (setf (node-get db $COMMENTS comment) plist))
+
+(defun read-catnodes (cat &optional (db *data-db*))
+  (node-get db $CATNODES cat :subdirs-p nil))
+
+(defun read-category (cat &optional (db *data-db*))
+  (node-get db $CATEGORIES cat :subdirs-p nil))
+
 (defun fill-and-print-to-string (template values)
   (with-output-to-string (stream)
     (let ((template:*string-modifier* 'identity))
@@ -243,6 +261,27 @@
                  (setf res (strcat "../" res)))
                res)))))
 
+(defun cat-neighbors-rendering-plist (node-plist &optional (db *data-db*))
+  (when (atom node-plist)
+    (setf node-plist (read-node node-plist db)))
+  (loop with neighbors = (getf node-plist :cat-neighbors)
+     for nid = (getf node-plist :nid)
+     for (cat (prev . next)) on neighbors by #'cddr
+     for cat-plist = (read-category cat db)
+     for cat-name = (getf cat-plist :name)
+     for cat-desc = (or (getf cat-plist :description) cat-name)
+     for prev-url = (unless (eql prev nid)
+                      (car (getf (read-node prev db) :aliases)))
+     for next-url = (unless (eql next nid)
+                      (if (eql prev next)
+                          prev-url
+                          (car (getf (read-node next db) :aliases))))
+     when cat-name collect
+       `(:cat-name ,cat-name
+         :cat-desc ,cat-desc
+         :prev-url ,prev-url
+         :next-url ,next-url)))
+
 (defun make-node-plist (node &key (comments-p t) (data-db *data-db*))
   (with-settings ()
     (let* ((plist (or (if (listp node) node (data-get $NODES node :db data-db))
@@ -258,6 +297,8 @@
         (setf (getf plist :post-date)
               (unix-time-to-rfc-1123-string created))
         (setf (getf plist :author) (getf user-plist :name))
+        (setf (getf plist :category-info)
+              (cat-neighbors-rendering-plist plist data-db))
         (when comments-p
           (let ((comment-plists (fetch-comments (getf plist :comments) data-db)))
             (setf (getf plist :comment-plists) comment-plists

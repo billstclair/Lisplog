@@ -1,7 +1,18 @@
 <!-- TMPL_LOOP posts -->           <h2 class="content-title">
              <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
            </h2>
-           <div class="info">Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --></div>
+           <div class="info">
+             Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --><!-- TMPL_IF category-info -->
+
+               <span class="categories">
+                 <!-- TMPL_LOOP category-info -->
+                  &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR prev-url -->" title="Previous post in category">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+                  <span title="<!-- TMPL_VAR cat-desc -->"><!-- TMPL_VAR cat-name --></span>
+                  <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR next-url -->" title="Next post in category">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
+                  <!-- /TMPL_LOOP -->
+               </span>
+<!-- /TMPL_IF -->
+           </div>
            <div class="content-item">
              <!-- TMPL_VAR body -->
              <p><!-- TMPL_IF comment-count -->

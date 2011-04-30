@@ -68,6 +68,11 @@
       (parse-csv file #'f))
     cnt))
 
+(defparameter *csv-dir* (merge-pathnames "csv/" *lisplog-home*))
+
+(defun csv-file (file)
+  (merge-pathnames file *csv-dir*))
+
 (defun parse-drupal-csv (file db required-key line-function &rest rest)
   (let ((keys nil)
         (first-p t))
@@ -87,7 +92,27 @@
                          when val do
                           (setf (car tail) val))
                       (apply line-function plist db rest))))))
-      (parse-csv file #'line-function))))
+      (parse-csv (csv-file file) #'line-function))))
+
+;;;
+;;; Parsers for individual Drupal table dumps.
+;;; Export from the "Export" tab on a table's page in PHPMyAdmin
+;;; Choose "CSV" in the "Export" box
+;;; Change "Replace NULL by" from "NULL" to blank
+;;; Check "Put field names in the first row"
+;;; Click the "Go" button.
+;;; Move the file from wherever the browser saves it to lisplog/csv/
+;;;
+;;; Drupal table  "data" subdir
+;;; ============  =============
+;;; node          $NODES
+;;; url_alias     $NODES (the :aliases property of each)
+;;; comments      $COMMENTS (+ each node's :comments property)
+;;; users         $USERS
+;;; interwiki     $INTERWIKI
+;;; term_data     $CATEGORIES
+;;; term_node     $CATNODES (+ each node's :categories & :cat-neighbors property)
+;;;
 
 (defun store-drupal-node-line (plist db)
   (let* ((nid (getf plist :nid)))
@@ -163,6 +188,59 @@
   (unless file
     (setf file "interwiki.csv"))
   (parse-drupal-csv file db :iw_prefix 'store-drupal-interwiki-line verbose-p))
+
+(defun store-drupal-category-csv (plist db &optional verbose-p)
+  (let ((key (getf plist :tid))
+        (vid (getf plist :vid)))
+    (when (eql vid 3)
+      (when verbose-p (print plist))
+      (unless (blankp key)
+        (setf (node-get db $CATEGORIES key :subdirs-p nil) plist)))))
+
+(defun parse-drupal-category-csv (db &optional file verbose-p)
+  (unless file
+    (setf file "term_data.csv"))
+  (parse-drupal-csv file db :tid 'store-drupal-category-csv verbose-p))
+
+;; Most of this really belongs somewhere else as a function
+;; to run on the database.
+(defun parse-drupal-term-node-csv (&optional db file)
+  (unless db
+    (setf db *data-db*))
+  (unless file
+    (setf file "term_node.csv"))
+  (let ((term-hash (make-hash-table :size 5000))
+        (term-node-plist nil))
+    (flet ((add-node (plist db)
+             (declare (ignore db))
+             (setf (gethash (getf plist :nid) term-hash) (getf plist :tid))))
+      (parse-drupal-csv file db :tid #'add-node))
+    (maphash (lambda (nid tid)
+               (let ((time (getf (data-get $NODES nid :db db) :created)))
+                 (when time
+                   (push (cons nid time) (getf term-node-plist tid)))))
+             term-hash)
+    (loop for (tid nodes) on term-node-plist by #'cddr
+       do
+         (setf nodes (sort nodes '> :key #'cdr)
+               (data-get $CATNODES tid :db db :subdirs-p nil) nodes)
+         (loop with last = (last nodes)
+            ;; List is sorted with newer entries first
+            for next = (caar last) then node-num
+            for prev-cell in (progn (setf (cdr last) (list (car nodes)))
+                               (cdr nodes))
+            for node-num = (caar nodes) then prev
+            for prev = (car prev-cell)
+            for node = (data-get $NODES node-num :db db)
+            for neighbors = (getf node :cat-neighbors)
+            do
+              (setf (getf neighbors tid) (cons prev next)
+                    (getf node :cat-neighbors) neighbors)
+              (setf (data-get $NODES node-num :db db) node)))))
+
+;;;
+;;; Fixup functions
+;;;
 
 (defun fix-badly-named-posts (&key (db *data-db*) verbose-p)
   (do-nodes (node db)
@@ -248,11 +326,16 @@
   (parse-drupal-comments-csv db)
   (format t " Done.~%Parsing users...")
   (parse-drupal-users-csv db)
+  (format t " Done.~%Parsing categories...")
+  (parse-drupal-category-csv db)
+  (format t " Done.~%Parsing node to category mapping...")
+  (parse-drupal-term-node-csv db)
   (format t " Done.~%Renaming quote posts...")
   (fix-badly-named-posts :db db)
   (format t " Done.~%Fixing bad chars...")
   (fix-bad-chars db)
   (format t " Done.~%Fixing slashdot credits...")
+  (fix-slashdot db)
   (format t " Done.~%Indexing years...")
   (index-years db)
   (format t " Done.~%")
