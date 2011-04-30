@@ -99,7 +99,7 @@
   (node-get db dir file :subdirs-p subdirs-p))
 
 (defun (setf data-get) (value dir file &key (db *data-db*) (subdirs-p t))
-  (setf (node-get db dir file :subdirs-p subsirs-p) value))
+  (setf (node-get db dir file :subdirs-p subdirs-p) value))
 
 (defun fill-and-print-to-string (template values)
   (with-output-to-string (stream)
@@ -142,10 +142,36 @@
 (defun eliminate-empty-paragraphs (str)
   (fsdb:str-replace "<p></p>" "" str))
 
+(defun process-interwiki-references (str)
+  (let ((matches nil))
+    (cl-ppcre:do-scans (ms me rs re
+                           "\\[(.+?)\\:(.*?)\\]"
+                           str)
+      (push (cons rs re) matches))
+    (loop for (rs . re) in matches
+       for ks = (aref rs 0)
+       for ke = (aref re 0)
+       for key = (subseq str ks ke)
+       for url = (getf (data-get $INTERWIKI key :subdirs-p nil) :iw_url)
+       for ns = (aref rs 1)
+       for ne = (aref re 1)
+       for name = (if (eql ns ne) key (subseq str ns ne))
+       when url
+       do
+         (setf str (strcat (subseq str 0 ks)
+                           "<a href='"
+                           url
+                           "'>"
+                           name
+                           "</a>"
+                           (subseq str ne)))))
+  str)
+
 (defun drupal-format (str)
-  (eliminate-empty-paragraphs
-   (do-drupal-line-breaks
-       (do-drupal-quotes str))))
+  (process-interwiki-references
+   (eliminate-empty-paragraphs
+    (do-drupal-line-breaks
+        (do-drupal-quotes str)))))
 
 ;; This deals with [quote]...[/quote] from Drupal
 (defun do-drupal-formatting (plist)
@@ -179,12 +205,15 @@
   (loop for num in numbers
      for plist = (data-get $COMMENTS num)
      for text = (getf plist :comment)
+     for unapproved-p = (eql 1 (getf plist :status))
+     unless unapproved-p
      do
        (setf (getf plist :comment) (drupal-format text)
              (getf plist :post-date)
              (unix-time-to-rfc-1123-string (getf plist :timestamp)))
        (when (blankp (getf plist :homepage))
          (setf (getf plist :homepage) nil))
+     unless unapproved-p
      collect plist))
 
 (defun render-template (template-name plist &key

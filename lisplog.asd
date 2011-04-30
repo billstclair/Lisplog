@@ -14,7 +14,7 @@
   :author "Bill St. Clair <bill@billstclair.com>"
   :version "0.01"
   :license "Apache"
-  :depends-on (fsdb md5 anaphora html-template hunchentoot)
+  :depends-on (fsdb md5 anaphora html-template cl-fad cl-ppcre hunchentoot)
   :components
   ((:module src
     :serial t
@@ -25,9 +25,9 @@
      (:file "utility")
      (:file "tokens")
      (:file "db")
-     (:file "csv")
      (:file "templates")
      (:file "history")
+     (:file "csv")
      ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

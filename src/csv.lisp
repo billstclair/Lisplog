@@ -164,6 +164,76 @@
     (setf file "interwiki.csv"))
   (parse-drupal-csv file db :iw_prefix 'store-drupal-interwiki-line verbose-p))
 
+(defun fix-badly-named-posts (&key (db *data-db*) verbose-p)
+  (do-nodes (node db)
+    (let* ((alias (car (getf node :aliases)))
+           (pos (search ".html_" alias :test #'equal)))
+      (when pos
+        (setf alias (strcat (subseq alias 0 pos)
+                            (subseq alias (+ pos 5))
+                            ".html"))
+        (when verbose-p
+          (format t "~&~d: ~s~%" (getf node :nid) alias))
+        (setf (car (getf node :aliases)) alias)
+        (setf (data-get $NODES (getf node :nid) :db db) node)))))
+
+(defun find-non-html-posts (&optional (db *data-db*))
+  (let (res)
+    (do-nodes (node db)
+      (let ((aliases (getf node :aliases)))
+        (dolist (alias aliases)
+          (unless (eql (search ".html" alias :from-end t :test #'string-equal)
+                       (- (length alias) 5))
+            (push (cons (getf node :nid) aliases) res)
+            (return)))))
+    (nreverse res)))
+
+(defun fix-nodes (fixer &key comments-p (db *data-db*))
+  (let ((cnt 0))
+    (do-nodes (node db)
+      (when (or (funcall fixer node :teaser)
+                (funcall fixer node :body))
+        (setf (data-get $NODES (getf node :nid) :db db) node)
+        (incf cnt)))
+    (when comments-p
+      (do-comments (comment db)
+        (when (funcall fixer comment :comment)
+          (setf (data-get $COMMENTS (getf comment :cid)) comment)
+          (incf cnt))))
+    cnt))  
+
+(defparameter *bad-char-plist*
+  `(,(concatenate
+      'string '(#\Latin_Small_Letter_A_With_Circumflex #\U+20AC #\U+201D))
+     "--"
+    ))
+
+(defun fix-bad-plist-entry (plist key)
+  (let ((entry (getf plist key))
+        (res nil))
+    (when (stringp entry)
+      (loop for (search replace) on *bad-char-plist* by #'cddr
+         when (search search entry :test #'equal)
+         do
+           (setf res t)
+           (setf (getf plist key) (fsdb:str-replace search replace entry))))
+    res))
+
+(defun fix-bad-chars (&optional (db *data-db*))
+  (fix-nodes #'fix-bad-plist-entry :comments-p t :db db))
+
+(defun fix-slashdot-entry (plist key)
+  (let ((text (getf plist key))
+        (res nil)
+        (search-string "[/.:"))
+    (when (search search-string text)
+      (setf (getf plist key) (fsdb:str-replace search-string "[slashdot:" text))
+      (setf res t))
+    res))
+
+(defun fix-slashdot (&optional (db *data-db*))
+  (fix-nodes #'fix-slashdot-entry :comments-p t :db db))
+
 ;; This gets enough to make the main site.
 ;; Still need to add the categories and the aggregator,
 ;; but I'm going to start with this.
@@ -178,6 +248,11 @@
   (parse-drupal-comments-csv db)
   (format t " Done.~%Parsing users...")
   (parse-drupal-users-csv db)
+  (format t " Done.~%Renaming quote posts...")
+  (fix-badly-named-posts :db db)
+  (format t " Done.~%Fixing bad chars...")
+  (fix-bad-chars db)
+  (format t " Done.~%Fixing slashdot credits...")
   (format t " Done.~%Indexing years...")
   (index-years db)
   (format t " Done.~%")

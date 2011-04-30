@@ -7,18 +7,21 @@
 
 (in-package :lisplog)
 
-(defun map-nodes (function &optional (db *data-db*))
+(defun map-nodes-or-comments (function nodes-or-comments &optional (db *data-db*))
   "Calls function with the plist for each node, in directory order"
   (flet ((get-node (path file)
            (let ((str (fsdb:db-get db path file)))
              (when str (read-from-string str)))))
     (declare (dynamic-extent #'get-node))
-    (dolist (file (fsdb:db-contents db $NODES))
-      (let ((path (fsdb:append-db-keys $NODES file)))
+    (dolist (file (fsdb:db-contents db nodes-or-comments))
+      (let ((path (fsdb:append-db-keys nodes-or-comments file)))
         (cond ((fsdb:db-dir-p db path)
                (dolist (file (fsdb:db-contents db path))
                  (funcall function (get-node path file))))
-              (t (funcall function (get-node $NODES file))))))))
+              (t (funcall function (get-node nodes-or-comments file))))))))
+
+(defun map-nodes (function &optional (db *data-db*))
+  (map-nodes-or-comments function $NODES db))
 
 (defmacro do-nodes ((node &optional (db '*data-db*)) &body body)
   (let ((thunk (gensym "THUNK")))
@@ -26,6 +29,16 @@
        (flet ((,thunk (,node) ,@body))
          (declare (dynamic-extent #',thunk))
          (map-nodes #',thunk ,db)))))
+
+(defun map-comments (function &optional (db *data-db*))
+  (map-nodes-or-comments function $COMMENTS db))
+
+(defmacro do-comments ((comment &optional (db '*data-db*)) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(block nil
+       (flet ((,thunk (,comment) ,@body))
+         (declare (dynamic-extent #',thunk))
+         (map-comments #',thunk ,db)))))
 
 ;; Should do something to posts with status other than 1 here.
 ;; Then we'll be able to view them in the admin interface.
