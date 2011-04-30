@@ -227,16 +227,23 @@
          (loop with last = (last nodes)
             ;; List is sorted with newer entries first
             for next = (caar last) then node-num
+            for node-num = (caar nodes) then prev
+            for node = (data-get $NODES node-num :db db) then prev-node
             for prev-cell in (progn (setf (cdr last) (list (car nodes)))
                                (cdr nodes))
-            for node-num = (caar nodes) then prev
             for prev = (car prev-cell)
-            for node = (data-get $NODES node-num :db db)
+            for prev-node = (data-get $NODES prev)
             for neighbors = (getf node :cat-neighbors)
             do
-              (setf (getf neighbors tid) (cons prev next)
-                    (getf node :cat-neighbors) neighbors)
-              (setf (data-get $NODES node-num :db db) node)))))
+              (cond ((eql 0 (getf prev-node :status))
+                     ;; Unshown node, skip it
+                     (setf prev node-num
+                           prev-node node
+                           node-num next))
+                    (t
+                     (setf (getf neighbors tid) (cons prev next)
+                           (getf node :cat-neighbors) neighbors)
+                     (setf (data-get $NODES node-num :db db) node)))))))
 
 ;;;
 ;;; Fixup functions

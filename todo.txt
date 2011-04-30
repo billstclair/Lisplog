@@ -2,12 +2,6 @@ Drupal formatting respects <pre>...</pre>
 
 Latest comments block on home page.
 
-Categories
-  Can't easily do Drupal's category pages, except with the dynamic server,
-  but can link to next and previous posts with the same category. Or just
-  have the category link to the previous post.
-  Or a page of links for each category.
-
 [quote person]
 
 Dynamic server
@@ -32,3 +26,6 @@ Go LIVE!
 
 New users/moderation
 Change/initialize settings
+
+Categories
+  Launch page for last post in all categories
