@@ -13,8 +13,35 @@
        (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
          ,@body))))
 
-(defvar *webserver-db* nil)
-(defvar *webserver-acceptor* nil)
+;; This allows serving multiple weblogs from a single lisp image.
+;; That will work if they take data from separate data directories,
+;; and render to separate site directories.
+;; It will probably fail in mysterious ways if you try to
+;; share a data or site directory between two ports.
+
+(defun get-port-db (&optional (port (hunchentoot:acceptor-port
+                                     hunchentoot:*acceptor*)))
+  (cdr (assoc port *port-db-alist*)))
+
+(defun (setf get-port-db) (db &optional (port (hunchentoot:acceptor-port
+                                               hunchentoot:*acceptor*)))
+  (let ((cell (assoc port *port-db-alist*)))
+    (if cell
+        (setf (cdr cell) db)
+        (push (cons port db) *port-db-alist*)))
+
+(defun get-port-acceptor (&optional (port (hunchentoot:acceptor-port
+                                           hunchentoot:*acceptor*)))
+  (cdr (assoc port *port-acceptor-alist*)))
+
+(defun (setf get-port-acceptor) (acceptor &optional
+                                 (port (hunchentoot:acceptor-port
+                                        hunchentoot:*acceptor*)))
+  (let ((cell (assoc port *port-acceptor-alist*)))
+    (if cell
+        (setf (cdr cell) acceptor)
+        (push (cons port acceptor) *port-acceptor-alist*)))
+  acceptor)
 
 (defun start (&optional (db *data-db*))
   (when *webserver-acceptor*
@@ -24,20 +51,27 @@
     (let ((port (or (get-setting :port) (error "No port setting"))))
       (prog1
           (setf hunchentoot:*show-lisp-errors-p* t)
-          (setf *webserver-acceptor*
+          (setf (get-port-acceptor port)
                 (hunchentoot:start
                  (make-instance 'hunchentoot:acceptor :port port)))
-        (setf *webserver-db* db)))))
+        (setf (get-port-db port) db)))))
 
-(defun stop ()
-  (when *webserver-acceptor*
-    (hunchentoot:stop *webserver-acceptor*)
-    (setf *webserver-acceptor* nil
-          *webserver-db* nil)))
+(defun stop (&key port (db *data-db*))
+  (unless port
+    (when db
+      (with-settings (db) (setf port (get-setting :port))))
+    (unless port
+      (cond ((and *port-db-alist* (null (cdr *port-db-alist*)))
+             (setf db (cadr *port-db-alist*)))
+            (t (error "Can't determine port")))))
+  (awhen (get-port-acceptor port)
+    (hunchentoot:stop it)
+    (setf (get-port-acceptor port) nil
+          (get-port-db port) nil)))
 
 ;;;
 ;;; URL handlers
-;;; You will usually get here via a RewriteRule in your blogs .htaccess file
+;;; You will usually get here via a RewriteRule in your blog's .htaccess file
 ;;; I use the "admin" dir to trigger that rule.
 ;;; This code would work with another trigger, however.
 ;;;
@@ -53,12 +87,12 @@
          (t (not-found))))
 
 ;; <baseurl>/admin/settings
-(hunchentoot:define-easy-handler (settings :uri "/settings") (uri https)
-  (format nil "settings, uri: ~s, https: ~s" uri https))
+(hunchentoot:define-easy-handler (handle-settings :uri "/settings") (uri https)
+  (settings uri https))
 
 ;; <baseurl>/admin/add_post
-(hunchentoot:define-easy-handler (add-post :uri "/add_post") (uri https)
-  (format nil "add post, uri: ~s, https: ~s" uri https))
+(hunchentoot:define-easy-handler (handle-add-post :uri "/add_post") (uri https)
+  (add-post uri https))
 
 ;;;
 ;;; Implementation of URL handlers
@@ -72,8 +106,12 @@
         )
     (values base ".")))
 
+(defun not-found ()
+  (setf (hunchentoot:return-code*) hunchentoot:+http-not-found+)
+  "404")
+
 ;; <baseurl>/admin/?node=<node-num>
-(defun render-web-node (node-num uri https &key alias (data-db *webserver-db*))
+(defun render-web-node (node-num uri https &key alias (data-db (get-port-db)))
   (unless (setf node-num (ignore-errors (parse-integer node-num)))
     (return-from render-web-node (not-found)))
   (with-settings ()
@@ -92,10 +130,6 @@
         (setf (getf plist :permalink) alias)
         (render-template post-template-name plist :data-db data-db)))))
 
-(defun not-found ()
-  (setf (hunchentoot:return-code*) hunchentoot:+http-not-found+)
-  "404")
-
 ;; <baseurl>/admin/?edit_post=<node-num>
 (defun edit-post (node-num uri https)
   (format nil "edit post, node: ~s, uri: ~s, https: ~s" node-num uri https))
@@ -107,6 +141,15 @@
 ;; <baseurl>/admin/?edit_comment=<comment-num>
 (defun edit-comment (comment-num uri https)
   (format nil "edit comment, comment: ~s, uri: ~s, https: ~s" comment-num uri https))
+
+;; <baseurl>/admin/settings
+(defun settings (uri https)
+  (format nil "settings, uri: ~s, https: ~s" uri https))
+
+;; <baseurl>/admin/add_post
+(defun add-post (uri https)
+  (format nil "add post, uri: ~s, https: ~s" uri https))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
