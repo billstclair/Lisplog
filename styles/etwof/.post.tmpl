@@ -17,9 +17,9 @@
              <!-- TMPL_VAR body -->
              <p><!-- TMPL_IF comment-count -->
                <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#comments"><!-- TMPL_VAR comment-count --></a><!-- TMPL_ELSE -->
-               <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a><!-- /TMPL_IF -->
-               <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
-               <a href="<!-- TMPL_VAR home -->/admin/?post">Add post</a>
+               <a href="<!-- TMPL_VAR home -->/admin/?add_comment=<!-- TMPL_VAR nid -->">Add comment</a><!-- /TMPL_IF -->
+               <a href="<!-- TMPL_VAR home -->/admin/?edit_post=<!-- TMPL_VAR nid -->">Edit post</a>
+               <a href="<!-- TMPL_VAR home -->/admin/?add_post=1">Add post</a>
              </p>
            </div>
 <!-- TMPL_IF comment-plists -->
@@ -33,14 +33,14 @@
              <div class="comment-info">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></div>
              <div class="comment-content">
                <!-- TMPL_VAR comment -->
-               <p><a href="<!-- TMPL_VAR home -->/admin/edit?comment=<!-- TMPL_VAR cid -->">Edit comment</a></p>
+               <p><a href="<!-- TMPL_VAR home -->/admin/?edit_comment=<!-- TMPL_VAR cid -->">Edit comment</a></p>
              </div>
            </div>
            <!-- /TMPL_LOOP --><!-- TMPL_IF comment-plists -->
            <div class="comment-content">
-             <a href="<!-- TMPL_VAR home -->/admin/comment?node=<!-- TMPL_VAR nid -->">Add comment</a>
-             <a href="<!-- TMPL_VAR home -->/admin/edit?node=<!-- TMPL_VAR nid -->">Edit post</a>
-             <a href="<!-- TMPL_VAR home -->/admin/?post">Add post</a>
+             <a href="<!-- TMPL_VAR home -->/admin/?add_comment=<!-- TMPL_VAR nid -->">Add comment</a>
+             <a href="<!-- TMPL_VAR home -->/admin/?edit_post=<!-- TMPL_VAR nid -->">Edit post</a>
+             <a href="<!-- TMPL_VAR home -->/admin/?add_post=1">Add post</a>
            </div><!-- /TMPL_IF --><!-- TMPL_IF recent-posts -->
            <div id="recent-posts">
              <p>
