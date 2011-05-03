@@ -1,0 +1,16 @@
+<div class="login">
+  <form action="login" method="post"><!-- TMPL_LOOP hidden-values -->
+    <input type="hidden" name="<!-- TMPL_VAR name -->" value="<!-- TMPL_VAR value -->"/><!-- /TMPL_LOOP -->
+    <table>
+      <tr>
+        <th>User name:</th>
+        <td><input type="text" name="username" width="20" value="<!-- TMPL_VAR username -->"/></td>
+      </tr><tr>
+        <th>Password:</th>
+        <td><input type="password" name="password" width="20"/></td>
+      </tr><tr>
+        <td colspan="2"><input type="submit" name="submit" value="Login"/></td>
+      </tr>
+    </table>
+  </form>
+</div>

@@ -113,6 +113,12 @@
 (defun (setf read-comment) (plist comment &optional (db *data-db*))
   (setf (node-get db $COMMENTS comment) plist))
 
+(defun read-user (user-num &optional (db *data-db*))
+  (node-get db $USERS user-num))
+
+(defun (setf read-user) (plist user-num &optional (db *data-db*))
+  (setf (node-get db $USERS user-num) plist))
+
 (defun read-catnodes (cat &optional (db *data-db*))
   (node-get db $CATNODES cat :subdirs-p nil))
 
@@ -335,8 +341,12 @@
       (flet ((get-node-plist (node-num)
                (let* ((plist (make-node-plist node-num :comments-p nil :data-db db)))
                  (setf (getf plist :permalink) (car (getf plist :aliases)))
-                 (awhen (getf plist :comments)
-                   (let ((cnt (length it)))
+                 (let ((cnt 0))
+                   (dolist (comment-num (getf plist :comments))
+                     (let ((comment-plist (read-comment comment-num db)))
+                       (unless (eql 1 (getf comment-plist :status))
+                         (incf cnt))))
+                   (when (> cnt 0)
                      (setf (getf plist :comment-count)
                            (if (eq cnt 1)
                                "1 comment"

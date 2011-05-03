@@ -28,7 +28,7 @@
   (let ((cell (assoc port *port-db-alist*)))
     (if cell
         (setf (cdr cell) db)
-        (push (cons port db) *port-db-alist*)))
+        (push (cons port db) *port-db-alist*))))
 
 (defun get-port-acceptor (&optional (port (hunchentoot:acceptor-port
                                            hunchentoot:*acceptor*)))
@@ -81,6 +81,7 @@
     (node edit_post add_comment edit_comment uri https)
   (setf (hunchentoot:content-type*) "text/html")
   (acond (node (render-web-node node uri https))
+         ((handle-login-screen uri https))
          (edit_post (edit-post edit_post uri https))
          (add_comment (add-comment add_comment uri https))
          (edit_comment (edit-comment edit_comment uri https))
@@ -88,11 +89,36 @@
 
 ;; <baseurl>/admin/settings
 (hunchentoot:define-easy-handler (handle-settings :uri "/settings") (uri https)
-  (settings uri https))
+  (or (handle-login-screen uri https)
+      (settings uri https)))
 
 ;; <baseurl>/admin/add_post
 (hunchentoot:define-easy-handler (handle-add-post :uri "/add_post") (uri https)
-  (add-post uri https))
+  (or (handle-login-screen uri https)
+      (add-post uri https)))
+
+;;;
+;;; Login and registration
+;;;
+
+(defun session-user-num (&optional (session hunchentoot:*session*))
+  (hunchentoot:session-value session))
+
+(defun handle-login-screen (uri https &key
+                            (username "")
+                            (query-string (hunchentoot:query-string*)))
+  (let ((session (hunchentoot:start-session))
+        (db (get-port-db)))
+    (unless (session-user-num session)
+      (with-settings (db)
+        (let ((plist `(:username ,username
+                       :hidden-values ((:name "query-string"
+                                        :value ,query-string)))))
+          (multiple-value-bind (base home) (compute-base-and-home uri https)
+            (setf (getf plist :home) home
+                  (getf plist :base) base))
+          (render-template ".login.tmpl" plist :data-db db))))))
+          
 
 ;;;
 ;;; Implementation of URL handlers
@@ -114,7 +140,7 @@
 (defun render-web-node (node-num uri https &key alias (data-db (get-port-db)))
   (unless (setf node-num (ignore-errors (parse-integer node-num)))
     (return-from render-web-node (not-found)))
-  (with-settings ()
+  (with-settings (data-db)
     (let* ((plist (make-node-plist node-num :data-db data-db))
            (post-template-name (get-post-template-name data-db)))
       (when plist

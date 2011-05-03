@@ -40,6 +40,17 @@
          (declare (dynamic-extent #',thunk))
          (map-comments #',thunk ,db)))))
 
+(defun map-users (function &optional (db '*data-db*))
+  (map-nodes-or-comments function $USERS db))
+
+(defmacro do-users ((user &optional (db '*data-db*)) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(block nil
+       (flet ((,thunk (,user) ,@body))
+         (declare (dynamic-extent #',thunk))
+         (map-users #',thunk ,db)))))
+
+
 ;; Should do something to posts with status other than 1 here.
 ;; Then we'll be able to view them in the admin interface.
 (defun decode-ymd (unix-time)
