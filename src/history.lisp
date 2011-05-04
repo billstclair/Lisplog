@@ -50,6 +50,32 @@
          (declare (dynamic-extent #',thunk))
          (map-users #',thunk ,db)))))
 
+(defun read-usernamehash (username &optional (db *data-db*))
+  (let ((hash (md5 username)))
+    (data-get $USERNAMEHASH hash :db db)))
+
+(defun (setf read-usernamehash) (value username &optional (db *data-db*))
+  (let ((hash (md5 username)))
+    (setf (data-get $USERNAMEHASH hash :db db) value)))
+
+(defun add-user-to-usernamehash (user &optional (db *data-db*))
+  (let* ((name (getf user :name))
+         (uid (getf user :uid)))
+    (when (and name uid)
+      (let ((uids (read-usernamehash name db)))
+        (pushnew uid uids)
+        (setf (read-usernamehash name db) uids)))))
+
+(defun get-user-by-name (username &optional (db *data-db*))
+  (let ((uids (read-usernamehash username db)))
+    (dolist (uid uids)
+      (let ((user (read-user uid db)))
+        (when (and user (equal username (getf user :name)))
+          (return user))))))
+
+(defun index-users (&optional (db *data-db*))
+  (do-users (user db)
+    (add-user-to-usernamehash user db)))
 
 ;; Should do something to posts with status other than 1 here.
 ;; Then we'll be able to view them in the admin interface.

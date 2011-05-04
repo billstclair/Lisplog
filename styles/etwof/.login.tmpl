@@ -1,5 +1,7 @@
 <div class="login">
-  <form action="login" method="post"><!-- TMPL_LOOP hidden-values -->
+  <h2>Please log in</h2><!-- TMPL_IF errmsg -->
+  <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF -->
+  <form action="admin/login" method="post"><!-- TMPL_LOOP hidden-values -->
     <input type="hidden" name="<!-- TMPL_VAR name -->" value="<!-- TMPL_VAR value -->"/><!-- /TMPL_LOOP -->
     <table>
       <tr>

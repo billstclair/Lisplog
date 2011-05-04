@@ -345,6 +345,8 @@
   (fix-slashdot db)
   (format t " Done.~%Indexing years...")
   (index-years db)
+  (format t " Done.~%Indexing users...")
+  (index-users db)
   (format t " Done.~%")
   db)
 

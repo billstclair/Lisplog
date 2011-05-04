@@ -81,7 +81,7 @@
     (node edit_post add_comment edit_comment uri https)
   (setf (hunchentoot:content-type*) "text/html")
   (acond (node (render-web-node node uri https))
-         ((handle-login-screen uri https))
+         ((login-screen uri https))
          (edit_post (edit-post edit_post uri https))
          (add_comment (add-comment add_comment uri https))
          (edit_comment (edit-comment edit_comment uri https))
@@ -89,13 +89,18 @@
 
 ;; <baseurl>/admin/settings
 (hunchentoot:define-easy-handler (handle-settings :uri "/settings") (uri https)
-  (or (handle-login-screen uri https)
+  (or (login-screen uri https)
       (settings uri https)))
 
 ;; <baseurl>/admin/add_post
 (hunchentoot:define-easy-handler (handle-add-post :uri "/add_post") (uri https)
-  (or (handle-login-screen uri https)
+  (or (login-screen uri https)
       (add-post uri https)))
+
+;; <baseurl>/admin/login
+(hunchentoot:define-easy-handler (handle-login :uri "/login")
+    (query-string username password uri https)
+  (login query-string username password uri https))
 
 ;;;
 ;;; Login and registration
@@ -104,21 +109,60 @@
 (defun session-user-num (&optional (session hunchentoot:*session*))
   (hunchentoot:session-value session))
 
-(defun handle-login-screen (uri https &key
-                            (username "")
-                            (query-string (hunchentoot:query-string*)))
+(defun (setf session-user-num) (user-num &optional (session hunchentoot:*session*))
+  (setf (hunchentoot:session-value session) user-num))
+
+;; Would be nice to show month history, but need to pass a node in here
+;; to do that.
+(defun login-screen (uri https &key
+                     errmsg
+                     (username "")
+                     (query-string (hunchentoot:query-string*)))
   (let ((session (hunchentoot:start-session))
         (db (get-port-db)))
     (unless (session-user-num session)
       (with-settings (db)
         (let ((plist `(:username ,username
+                       :errmsg ,errmsg
                        :hidden-values ((:name "query-string"
-                                        :value ,query-string)))))
+                                        :value ,query-string))
+                       ,@(compute-months-and-years-link-plist nil nil db))))
           (multiple-value-bind (base home) (compute-base-and-home uri https)
             (setf (getf plist :home) home
                   (getf plist :base) base))
           (render-template ".login.tmpl" plist :data-db db))))))
           
+(defun login-redirect-uri (query-string)
+  (let* ((params (hunchentoot::form-url-encoded-list-to-alist
+                  (cl-ppcre::split "&" query-string)))
+         (uri (cdr (assoc "uri" params :test #'equal)))
+         (https (cdr (assoc "https" params :test #'equal)))
+         (first t))
+    (setf uri (strcat (if (equal https "on") "https" "http")
+                      "://"
+                      uri))
+    (dolist (cell params)
+      (unless (member (car cell) '("uri" "https") :test #'equal)
+        (setf uri (strcat uri
+                          (if first "?" "&")
+                          (car cell)
+                          "="
+                          (hunchentoot:url-encode (cdr cell)))
+              first nil)))
+    uri))
+
+(defun login (query-string username password uri https)
+  (let* ((session (hunchentoot:start-session))
+         (db (get-port-db))
+         (user (get-user-by-name username db)))
+    (cond ((not (and user
+                     (equal (md5 password) (getf user :pass))))
+           (login-screen uri https
+                         :errmsg "Unknown user or wrong password"
+                         :username username
+                         :query-string query-string))
+          (t (setf (session-user-num session) (getf user :uid))
+             (hunchentoot:redirect (login-redirect-uri query-string))))))
 
 ;;;
 ;;; Implementation of URL handlers

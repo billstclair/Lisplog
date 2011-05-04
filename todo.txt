@@ -1,3 +1,5 @@
+blogroll
+
 Drupal formatting respects <pre>...</pre>
 
 Latest comments block on home page.
@@ -8,7 +10,7 @@ Dynamic server
 ==============
 
 Login/Permissions (initially just administrator and existing logins)
-Re-render subsets of the site or while site.
+Re-render subsets of the site or whole site.
 Dynamic serving. Is it faster? Is it faster if I preload the data?
 
 Edit/Create posts
@@ -17,6 +19,7 @@ Locking
 ctrl-shift-Q javascript to enter blockquote
 ctrl-shift-T javascript to enter TMPL_VAR
   Disable TMPL_xxx comments for non-posters.
+  Disable most HTML for non-posters
 
 CAPTCHA
 Comment moderation.
