@@ -19,6 +19,9 @@
 ;; It will probably fail in mysterious ways if you try to
 ;; share a data or site directory between two ports.
 
+(defvar *port-db-alist* nil)
+(defvar *port-acceptor-alist* nil)
+
 (defun get-port-db (&optional (port (hunchentoot:acceptor-port
                                      hunchentoot:*acceptor*)))
   (cdr (assoc port *port-db-alist*)))
@@ -44,11 +47,11 @@
   acceptor)
 
 (defun start (&optional (db *data-db*))
-  (when *webserver-acceptor*
-    (error "Hunchentoot already started"))
   (when (stringp db) (setf db (fsdb:make-fsdb db)))
   (with-site-db (db)
     (let ((port (or (get-setting :port) (error "No port setting"))))
+      (when (get-port-acceptor port)
+        (error "Hunchentoot already started"))
       (prog1
           (setf hunchentoot:*show-lisp-errors-p* t)
           (setf (get-port-acceptor port)

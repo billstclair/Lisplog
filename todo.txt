@@ -32,3 +32,5 @@ Change/initialize settings
 
 Categories
   Launch page for last post in all categories
+
+More persistent login sessions than the in-memory sessions provided by Hunchentoot.
