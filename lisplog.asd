@@ -8,13 +8,17 @@
 (pushnew (merge-pathnames "fsdb/" *lisplog-home*)
          asdf:*central-registry*
          :test #'equal)
+(pushnew (merge-pathnames "cl-crypto/" *lisplog-home*)
+         asdf:*central-registry*
+         :test #'equal)
 
 (asdf:defsystem :lisplog
   :description "Simple blogging in Common Lisp"
   :author "Bill St. Clair <bill@billstclair.com>"
   :version "0.01"
   :license "Apache"
-  :depends-on (fsdb md5 anaphora html-template cl-fad cl-ppcre hunchentoot)
+  :depends-on (fsdb cl-crypto           ;local
+               md5 anaphora html-template cl-fad cl-ppcre hunchentoot)
   :components
   ((:module src
     :serial t
