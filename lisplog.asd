@@ -18,7 +18,8 @@
   :version "0.01"
   :license "Apache"
   :depends-on (fsdb cl-crypto           ;local
-               md5 anaphora html-template cl-fad cl-ppcre hunchentoot)
+               md5 anaphora html-template cl-fad cl-ppcre
+               bordeaux-threads hunchentoot)
   :components
   ((:module src
     :serial t
@@ -32,6 +33,7 @@
      (:file "templates")
      (:file "history")
      (:file "csv")
+     (:file "sessions")
      (:file "webserver")
      ))))
 

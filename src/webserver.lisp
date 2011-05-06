@@ -56,7 +56,7 @@
           (setf hunchentoot:*show-lisp-errors-p* t)
           (setf (get-port-acceptor port)
                 (hunchentoot:start
-                 (make-instance 'hunchentoot:acceptor :port port)))
+                 (make-instance 'lisplog-acceptor :port port)))
         (setf (get-port-db port) db)))))
 
 (defun stop (&key port (db *data-db*))
@@ -109,21 +109,15 @@
 ;;; Login and registration
 ;;;
 
-(defun session-user-num (&optional (session hunchentoot:*session*))
-  (hunchentoot:session-value session))
-
-(defun (setf session-user-num) (user-num &optional (session hunchentoot:*session*))
-  (setf (hunchentoot:session-value session) user-num))
-
 ;; Would be nice to show month history, but need to pass a node in here
 ;; to do that.
 (defun login-screen (uri https &key
                      errmsg
                      (username "")
                      (query-string (hunchentoot:query-string*)))
-  (let ((session (hunchentoot:start-session))
+  (let ((session hunchentoot:*session*)
         (db (get-port-db)))
-    (unless (session-user-num session)
+    (unless (and session (uid-of session))
       (with-settings (db)
         (let ((plist `(:username ,username
                        :errmsg ,errmsg
@@ -155,7 +149,7 @@
     uri))
 
 (defun login (query-string username password uri https)
-  (let* ((session (hunchentoot:start-session))
+  (let* ((session (start-session))
          (db (get-port-db))
          (user (get-user-by-name username db)))
     (cond ((not (and user
@@ -164,7 +158,8 @@
                          :errmsg "Unknown user or wrong password"
                          :username username
                          :query-string query-string))
-          (t (setf (session-user-num session) (getf user :uid))
+          (t (setf (uid-of session) (getf user :uid))
+             (write-session session db)
              (hunchentoot:redirect (login-redirect-uri query-string))))))
 
 ;;;
