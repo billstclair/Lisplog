@@ -40,7 +40,7 @@
          (declare (dynamic-extent #',thunk))
          (map-comments #',thunk ,db)))))
 
-(defun map-users (function &optional (db '*data-db*))
+(defun map-users (function &optional (db *data-db*))
   (map-nodes-or-comments function $USERS db))
 
 (defmacro do-users ((user &optional (db '*data-db*)) &body body)
@@ -49,6 +49,16 @@
        (flet ((,thunk (,user) ,@body))
          (declare (dynamic-extent #',thunk))
          (map-users #',thunk ,db)))))
+
+(defun map-categories (function &optional (db *data-db*))
+  (map-nodes-or-comments function $CATEGORIES db))
+
+(defmacro do-categories ((cat &optional (db '*data-db*)) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(block nil
+       (flet ((,thunk (,cat) ,@body))
+         (declare (dynamic-extent #',thunk))
+         (map-categories #',thunk ,db)))))
 
 (defun read-usernamehash (username &optional (db *data-db*))
   (let ((hash (md5 username)))

@@ -150,6 +150,29 @@
        (unix-to-universal-time unix-time)
        (get-universal-time))))
 
+(defparameter *short-month-names*
+  '("Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"))
+
+;; "Sat, 07 May 2011 12:53:33 GMT"
+(defun parse-rfc-1123-date (string)
+  (let ((parts (split-sequence:split-sequence #\space string)))
+    (assert
+     (and (eql (length parts) 6)
+          (string-equal "GMT" (elt parts 5))))
+    (let ((day (parse-integer (elt parts 1)))
+          (month (1+ (position (elt parts 2) *short-month-names*
+                               :test #'string-equal)))
+          (year (parse-integer (elt parts 3)))
+          (time-parts (split-sequence:split-sequence #\: (elt parts 4))))
+      (assert (eql 3 (length time-parts)))
+      (let ((h (parse-integer (elt time-parts 0)))
+            (m (parse-integer (elt time-parts 1)))
+            (s (parse-integer (elt time-parts 2))))
+        (encode-universal-time s m h day month year 0)))))
+
+(defun rfc-1123-string-to-unix-time (string)
+  (universal-to-unix-time (parse-rfc-1123-date string)))
+
 (defun efh (string)
   (hunchentoot:escape-for-html string))
 
