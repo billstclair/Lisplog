@@ -23,9 +23,6 @@
   (print-unreadable-object (session stream :type t)
     (format stream "~s ~s" (session-id-of session) (uid-of session))))
 
-(defmethod hunchentoot:session-cookie-value ((session session))
-  (session-id-of session))
-
 (defun session-get (session property)
   (getf (plist-of session) property))
 
@@ -105,6 +102,50 @@
           (when session
             (setf (gethash session-id *session-hash*) session))))))
 
+;;;
+;;; Hunchentoot interface
+;;;
+
+;; This allows serving multiple weblogs from a single lisp image.
+;; That will work if they take data from separate data directories,
+;; and render to separate site directories.
+;; It may fail in mysterious ways if you try to
+;; share a data or site directory between two ports.
+
+(defvar *port-db-alist* nil)
+(defvar *port-acceptor-alist* nil)
+
+(defun get-port-db (&optional (port (hunchentoot:acceptor-port
+                                     hunchentoot:*acceptor*)))
+  (cdr (assoc port *port-db-alist*)))
+
+(defun (setf get-port-db) (db &optional (port (hunchentoot:acceptor-port
+                                               hunchentoot:*acceptor*)))
+  (let ((cell (assoc port *port-db-alist*)))
+    (if cell
+        (setf (cdr cell) db)
+        (push (cons port db) *port-db-alist*))))
+
+(defun get-port-acceptor (&optional (port (hunchentoot:acceptor-port
+                                           hunchentoot:*acceptor*)))
+  (cdr (assoc port *port-acceptor-alist*)))
+
+(defun (setf get-port-acceptor) (acceptor &optional
+                                 (port (hunchentoot:acceptor-port
+                                        hunchentoot:*acceptor*)))
+  (let ((cell (assoc port *port-acceptor-alist*)))
+    (if cell
+        (setf (cdr cell) acceptor)
+        (push (cons port acceptor) *port-acceptor-alist*)))
+  acceptor)
+
+(defclass lisplog-request (hunchentoot:request)
+  ())
+
+(defclass lisplog-acceptor (hunchentoot:acceptor)
+  ()
+  (:default-initargs :request-class 'lisplog-request))
+
 (defun start-session ()
   (or (hunchentoot:session hunchentoot:*request*)
       (let ((session (make-session)))
@@ -116,12 +157,8 @@
         (setf (hunchentoot:session hunchentoot:*request*) session
               hunchentoot:*session* session))))
 
-(defclass lisplog-request (hunchentoot:request)
-  ())
-
-(defclass lisplog-acceptor (hunchentoot:acceptor)
-  ()
-  (:default-initargs :request-class 'lisplog-request))
+(defmethod hunchentoot:session-cookie-value ((session session))
+  (session-id-of session))
 
 (defmethod hunchentoot:session-cookie-name ((acceptor lisplog-acceptor))
   (with-settings ((get-port-db))

@@ -12,6 +12,15 @@
      when (eq x (car tail))
      return tail))
 
+(defun delq (x list)
+  (loop for pre-tail = nil then tail
+     for tail on list do
+       (when (eq (car tail) x)
+         (if (eq tail list)
+             (setf list (cdr tail))
+             (setf (cdr pre-tail) (cdr tail)))))
+  list)
+
 (defun assq (x alist)
   (dolist (cell alist)
     (when (eq x (car cell))

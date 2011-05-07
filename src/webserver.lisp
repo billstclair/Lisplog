@@ -13,39 +13,6 @@
        (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
          ,@body))))
 
-;; This allows serving multiple weblogs from a single lisp image.
-;; That will work if they take data from separate data directories,
-;; and render to separate site directories.
-;; It will probably fail in mysterious ways if you try to
-;; share a data or site directory between two ports.
-
-(defvar *port-db-alist* nil)
-(defvar *port-acceptor-alist* nil)
-
-(defun get-port-db (&optional (port (hunchentoot:acceptor-port
-                                     hunchentoot:*acceptor*)))
-  (cdr (assoc port *port-db-alist*)))
-
-(defun (setf get-port-db) (db &optional (port (hunchentoot:acceptor-port
-                                               hunchentoot:*acceptor*)))
-  (let ((cell (assoc port *port-db-alist*)))
-    (if cell
-        (setf (cdr cell) db)
-        (push (cons port db) *port-db-alist*))))
-
-(defun get-port-acceptor (&optional (port (hunchentoot:acceptor-port
-                                           hunchentoot:*acceptor*)))
-  (cdr (assoc port *port-acceptor-alist*)))
-
-(defun (setf get-port-acceptor) (acceptor &optional
-                                 (port (hunchentoot:acceptor-port
-                                        hunchentoot:*acceptor*)))
-  (let ((cell (assoc port *port-acceptor-alist*)))
-    (if cell
-        (setf (cdr cell) acceptor)
-        (push (cons port acceptor) *port-acceptor-alist*)))
-  acceptor)
-
 (defun start (&optional (db *data-db*))
   (when (stringp db) (setf db (fsdb:make-fsdb db)))
   (with-site-db (db)
@@ -198,9 +165,42 @@
         (setf (getf plist :permalink) alias)
         (render-template post-template-name plist :data-db data-db)))))
 
+(defun redirect-uri (uri https)
+  (if uri
+      (format nil "~a://~a" (if https "https" "http") uri)
+      "http://google.com/search?&q=loser"))
+
 ;; <baseurl>/admin/?edit_post=<node-num>
 (defun edit-post (node-num uri https)
-  (format nil "edit post, node: ~s, uri: ~s, https: ~s" node-num uri https))
+  (let* ((session hunchentoot:*session*)
+         (db (get-port-db))
+         (uid (uid-of session))
+         (user (read-user uid db))
+         (permissions (getf user :permissions))
+         (author (getf user :name))
+         (node (read-node node-num db))
+         (alias (car (getf node :aliases)))
+         (title (getf node :title))
+         (created (getf node :created))
+         (promote (getf node :promote))
+         (status (getf node :status))
+         (body (getf node :body))
+         (plist `(:node-num ,node-num
+                  ,@(compute-months-and-years-link-plist nil nil db))))
+    (unless (and node
+                 (or (memq :admin permissions)
+                     (memq :poster permissions)))
+      (return-from edit-post
+        (hunchentoot:redirect (redirect-uri uri https))))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (setf (getf plist :home) home
+            (getf plist :base) base
+            (getf plist :author) (efh author)
+            (getf plist :post-time) (unix-time-to-rfc-1123-string created)
+            (getf plist :title) (efh title)
+            (getf plist :alias) (efh alias)
+            (getf plist :body) (efh body)))
+    (render-template ".edit-post.tmpl" plist :data-db db)))
 
 ;; <baseurl>/admin/?add_comment=<node-num>
 (defun add-comment (node-num uri https)

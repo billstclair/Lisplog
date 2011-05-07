@@ -1,0 +1,48 @@
+<div class="edit-post"><!-- TMPL_IF errmsg -->
+  <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF -->
+  <form action="admin/edit_post" method="post"><!-- TMPL_IF node-num -->
+    <input type="hidden" name="node-num" value="<!-- TMPL_VAR node-num -->"/><!-- /TMPL_IF -->
+    <fieldset>
+      <table>
+        <tr>
+          <td><span class="label">Author:</span> <span class="form-required">*</span></td>
+          <td><input type="text" name="author" size="30" value="<!-- TMPL_VAR author -->"/></td>
+        </tr><tr>
+          <td><span class="label">Time:</span> <span class="form-required">*</span></td>
+          <td><input type="text" name="post-time" size="30" value="<!-- TMPL_VAR post-time -->"/><td>
+        </tr><tr>
+          <td><span class="label">Title:</span> <span class="form-required">*</span></td>
+          <td><input type="text" name="title" size="50" value="<!-- TMPL_VAR title -->"/></td>
+        </tr><tr>
+          <td><span class="label">Alias:</span> <span class="form-required">*</span></td>
+          <td><input type="text" name="alias" size="50" value="<!-- TMPL_VAR alias -->"/></td>
+        </tr>
+        </tr><tr>
+          <td></td>
+          <td><input type="checkbox" name="published"<!-- TMPL_IF published --> checked="checked"<!-- /TMPL_IF -->/> Published<br/>
+            <input type="checkbox" name="promoted"<!-- TMPL_IF promoted --> checked="checked"<!-- /TMPL_IF -->/> Promoted to front page</td>
+        </tr>
+      </table>
+    </fieldset>
+    <br/>
+    <span class="label">Body:</span> <span class="form-required">*</span><br/>
+    <textarea wrap="virtual" cols="80" rows="20" name="body">
+<!-- TMPL_VAR body -->
+    </textarea>
+    <br/>
+    <fieldset>
+      <legend>Input format</legend>
+      <input type="radio" name="input-format" value="filtered-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Filtered HTML<br/>
+      <input type="radio" name="input-format" value="full-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Full HTML<br/>
+      <input type="radio" name="input-format" value="raw-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Raw HTML<br/>
+    </fieldset>
+    <span class="label">Categories:</span><br/>
+    <select name="categories" multiple="multiple" size="12"><!-- TMPL_LOOP category-options -->
+      <option value="<!-- TMPL_VAR value -->"<!-- TMPL_IF selected --> selected="selected"<!-- /TMPL_IF -->><!-- TMPL_VAR label --></option><!-- /TMPL_LOOP -->
+    </select>
+    <br/>
+    <input type="submit" name="preview" value="Preview">
+    <input type="submit" name="submit" value="Submit"><!-- TMPL_IF node-num -->
+    <input type="submit" name="delete" value="Delete"><!-- /TMPL_IF -->
+  </form>
+</div>

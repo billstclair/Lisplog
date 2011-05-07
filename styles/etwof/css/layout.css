@@ -263,3 +263,15 @@ blockquote {
 .errmsg {
    color: red;
 }
+
+.label {
+   font-weight: bold;
+}
+
+.form-required {
+   color: red;
+}
+
+.center p {
+   text-align: center;
+}

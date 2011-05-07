@@ -41,6 +41,7 @@
   (with-settings (db)
     (let ((style (get-setting :style)))
       (or (fsdb:db-get *styles-db* style file)
+          (fsdb:db-get *styles-db* $DEFAULT file)
           (error "No index template for style: ~s" style)))))
 
 (defun write-site-file (path contents &optional (site-db *site-db*))
@@ -119,6 +120,19 @@
 (defun (setf read-user) (plist user-num &optional (db *data-db*))
   (setf (node-get db $USERS user-num) plist))
 
+(defun user-permission-p (user-num permission &optional (db *data-db*))
+  (not (null (memq permission (getf (read-user user-num db) :permissions)))))
+
+(defun (setf user-permission-p) (value user-num permission &optional (db *data-db*))
+  (let ((user (read-user user-num db)))
+    (unless user (error "No user number: ~s" user-num))
+    (if value
+        (pushnew permission (getf user :permissions))
+        (setf (getf user :permissions)
+              (delq permission (getf user :permissions))))
+    (setf (read-user user-num db) user)
+    value))
+
 (defun read-catnodes (cat &optional (db *data-db*))
   (node-get db $CATNODES cat :subdirs-p nil))
 
@@ -135,6 +149,9 @@
    (if unix-time
        (unix-to-universal-time unix-time)
        (get-universal-time))))
+
+(defun efh (string)
+  (hunchentoot:escape-for-html string))
 
 (defun do-drupal-quotes (str)
   (fsdb:str-replace
