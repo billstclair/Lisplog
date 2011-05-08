@@ -48,13 +48,14 @@
 
 ;; <baseurl>/admin/?command=value
 (hunchentoot:define-easy-handler (handle-admin :uri "/")
-    (node edit_post add_comment edit_comment uri https)
+    (node edit_post add_comment edit_comment uri https error)
   (setf (hunchentoot:content-type*) "text/html")
   (acond (node (render-web-node node uri https))
          ((login-screen uri https))
          (edit_post (edit-post edit_post uri https))
          (add_comment (add-comment add_comment uri https))
          (edit_comment (edit-comment edit_comment uri https))
+         (error (error-page error))
          (t (not-found))))
 
 ;; <baseurl>/admin/settings
@@ -69,11 +70,10 @@
 
 ;; <baseurl>/admin/submit_post
 (hunchentoot:define-easy-handler (handle-submit-post :uri "/submit_post")
-    (uri https node-num author post-time title alias published promoted body
+    (uri https node-num post-time title alias published promoted body
          input-format preview submit delete)
   (submit-post uri https
                :node-num node-num
-               :author author
                :post-time post-time
                :title title
                :alias alias
@@ -107,8 +107,7 @@
         (let ((plist `(:username ,username
                        :errmsg ,errmsg
                        :hidden-values ((:name "query-string"
-                                        :value ,query-string))
-                       ,@(compute-months-and-years-link-plist nil nil db))))
+                                        :value ,query-string)))))
           (multiple-value-bind (base home) (compute-base-and-home uri https)
             (setf (getf plist :home) home
                   (getf plist :base) base))
@@ -163,6 +162,32 @@
   (setf (hunchentoot:return-code*) hunchentoot:+http-not-found+)
   "404")
 
+(defconstant $no-post-permission 1)
+(defconstant $unknown-post-number 2)
+(defconstant $no-add-or-edit-permission 3)
+
+(defparameter *error-alist*
+  `((,$no-post-permission . "You don't have permission to submit posts")
+    (,$unknown-post-number . "Unknown post number.")
+    (,$no-add-or-edit-permission . "You don't have permission to add or edit posts")))
+
+(defun error-url (uri https errnum)
+  (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
+
+(defun redirect-to-error-page (uri https errnum)
+  (hunchentoot:redirect (error-url uri https errnum)))
+
+(defun error-page (errnum)
+  (let* ((db (get-port-db))
+         (errmsg (or (cdr (assoc (ignore-errors (parse-integer errnum))
+                                 *error-alist*))
+                     "Unknown error"))
+         (plist `(:home ".."
+                 :title "Error"
+                 :errnum ,errnum
+                 :errmsg ,errmsg)))
+    (render-template ".error.tmpl" plist :data-db db)))
+
 ;; <baseurl>/admin/?node=<node-num>
 (defun render-web-node (node-num uri https &key alias (data-db (get-port-db)))
   (unless (setf node-num (ignore-errors (parse-integer node-num)))
@@ -175,12 +200,11 @@
           (setf alias (car (getf plist :aliases))))
         (setf plist `(:posts
                       (,plist)
-                      :page-title ,(getf plist :title)
-                      ,@(compute-history-plist node-num data-db)))
+                      :page-title ,(getf plist :title)))
         (multiple-value-bind (base home) (compute-base-and-home uri https)
           (setf (getf plist :home) home
-                (getf plist :base) base))
-        (setf (getf plist :permalink) alias)
+                (getf plist :base) base
+                (getf plist :permalink) alias))
         (render-template post-template-name plist :data-db data-db)))))
 
 (defun redirect-uri (uri https)
@@ -189,14 +213,27 @@
       "http://google.com/search?&q=loser"))
 
 (defun node-format-to-edit-post-plist (format)
-  (cond ((eql format 1) '(:filtered-html t))
-        ((eql format 3) '(:full-html t))
-        ((eql format 5) '(:raw-html t))))
+  (cond ((eql format $filtered-html-format) '(:filtered-html t))
+        ((eql format $full-html-format) '(:full-html t))
+        ((eql format $raw-html-format) '(:raw-html t))))
 
+(defparameter *format-name-to-number-alist*
+  `(("filtered-html" . ,$filtered-html-format)
+    ("full-html" . ,$full-html-format)
+    ("raw-html" . ,$raw-html-format)))
+
+(defun node-format-name-to-number (format-name)
+  (or (cdr (assoc format-name *format-name-to-number-alist*
+                  :test #'equal))
+      1))
+
+;; Node is a post node, as returned by read-node, or a node number, or
+;; a list of category numbers (identified by the first element of the
+;; list being an integer).
 (defun node-to-edit-post-category-options (node &optional (db *data-db*))
   (when (integerp node)
     (setf node (read-node node db)))
-  (let ((node-cats (if (listp node)
+  (let ((node-cats (if (or (null node) (integerp (car node)))
                        node
                        (loop for (cat) on (getf node :cat-neighbors) by #'cddr
                           collect cat)))
@@ -227,11 +264,13 @@
          (body (getf node :body))
          (format (getf node :format))
          plist)
-    (unless (and node
-                 (or (memq :admin permissions)
-                     (memq :poster permissions)))
+    (when (and node-num (not node))
       (return-from edit-post
-        (hunchentoot:redirect (redirect-uri uri https))))
+        (redirect-to-error-page uri https $unknown-post-number)))
+    (unless (or (memq :admin permissions)
+                (memq :poster permissions))
+      (return-from edit-post
+        (redirect-to-error-page uri https $no-add-or-edit-permission)))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (setf plist `(:node-num ,node-num
                     :home ,home
@@ -244,49 +283,89 @@
                     :promoted ,(eql promote 1)
                     :body ,(efh body)
                     ,@(node-format-to-edit-post-plist format)
-                    :category-options ,(node-to-edit-post-category-options node db)
-                    ,@(compute-months-and-years-link-plist nil nil db))))
+                    :category-options ,(node-to-edit-post-category-options node db))))
     (render-template ".edit-post.tmpl" plist :data-db db)))
 
-(defun submit-post (uri https &key node-num author post-time title alias published
+(defun submit-post (uri https &key node-num post-time title alias published
                     promoted body input-format preview submit delete)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
          (uid (uid-of session))
          (user (read-user uid db))
+         (author (getf user :name))
          (permissions (getf user :permissions))
          (node (read-node node-num db))
-         (errmsg nil)
+         (created (ignore-errors (rfc-1123-string-to-unix-time post-time)))
+         (promote (if (blankp promoted) 0 1))
+         (status (if (blankp published) 0 1))
          (categories (mapcar 'parse-integer
                              (hunchentoot::compute-parameter
                               "categories" 'list :both)))
+         (format (node-format-name-to-number input-format))
+         (errmsg nil)
          plist)
-    (unless (and node
-                 (or (memq :admin permissions)
-                     (memq :poster permissions)))
-      (setf errmsg "You don't have permission to submit posts"))
-    (multiple-value-bind (base home) (compute-base-and-home uri https)
-      (setf plist `(:node-num ,node-num
-                    :errmsg ,errmsg
-                    :home ,home
-                    :base ,base
-                    :author ,(efh author)
-                    :post-time ,(efh post-time)
-                    :title ,(efh title)
-                    :alias ,(efh alias)
-                    :published ,(not (blankp published))
-                    :promoted ,(not (blankp promoted))
-                    :body ,(efh body)
-                    ,@(node-format-to-edit-post-plist
-                       (cdr (assoc input-format
-                                   '(("filtered-html" . 1)
-                                     ("full-html" . 3)
-                                     ("raw-html" . 5))
-                                   :test #'equal)))
-                    :category-options ,(node-to-edit-post-category-options
-                                        categories db)
-                    ,@(compute-months-and-years-link-plist nil nil db))))
-    (render-template ".edit-post.tmpl" plist :data-db db)))
+    (cond ((null created)
+           (setf errmsg
+                 "Badly formatted date. Should be: \"Day, date mon year hh:mm:ss GMT\"")
+           (when (and (blankp post-time) (setf created (getf node :created)))
+             (setf post-time (unix-time-to-rfc-1123-string created))))
+          ((blankp title)
+           (setf errmsg "Title may not be blank")
+           (when node
+             (setf title (getf node :title))))
+          ((blankp body)
+           (setf errmsg "Body may not be blank")
+           (when node
+             (setf body (getf node :body)))))
+    (when (and node-num (not node))
+      (return-from submit-post
+        (redirect-to-error-page uri https $unknown-post-number)))
+    (unless (or (memq :admin permissions)
+                (memq :poster permissions))
+      (return-from submit-post
+        (redirect-to-error-page uri https $no-add-or-edit-permission)))
+    (cond ((or preview errmsg)
+           (multiple-value-bind (base home) (compute-base-and-home uri https)
+             (setf plist
+                   `(:node-num ,node-num
+                     :home ,home
+                     :base ,base
+                     :errmsg ,(efh errmsg)
+                     :author ,(efh author)
+                     :post-time ,post-time
+                     :title ,(efh title)
+                     :alias ,(efh alias)
+                     :published ,(eql status 1)
+                     :promoted ,(eql promote 1)
+                     :body ,(efh body)
+                     ,@(node-format-to-edit-post-plist format)
+                     :category-options ,(node-to-edit-post-category-options
+                                         categories db)))
+             (when preview
+               (let* ((template-name (get-post-template-name db))
+                      (template (get-style-file template-name db))
+                      (node-plist
+                       (make-node-plist
+                        `(:nid ,node-num
+                          :uid ,uid
+                          :title ,title
+                          :aliases ,(list alias)
+                          :created ,created
+                          :status 1
+                          :body ,body
+                          :format ,format
+                          :home ,home)
+                        :comments-p nil
+                        :data-db db)))
+                 (setf (getf node-plist :no-editing) t
+                       (getf node-plist :permalink) (efh alias))
+                 (setf node-plist `(:posts (,node-plist)))
+                 (setf plist
+                       `(:preview ,(fill-and-print-to-string template node-plist)
+                                  ,@plist)))))
+           (render-template ".edit-post.tmpl" plist :data-db db))
+          (submit "Submit not done yet")
+          (delete "Delete not done yet"))))
 
 ;; <baseurl>/admin/?add_comment=<node-num>
 (defun add-comment (node-num uri https)

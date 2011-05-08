@@ -174,7 +174,7 @@
   (universal-to-unix-time (parse-rfc-1123-date string)))
 
 (defun efh (string)
-  (hunchentoot:escape-for-html string))
+  (and string (hunchentoot:escape-for-html string)))
 
 (defun do-drupal-quotes (str)
   (fsdb:str-replace
@@ -281,16 +281,19 @@
      collect plist))
 
 (defun render-template (template-name plist &key
+                        month year
                         (data-db *data-db*) index-template-name)
   (with-settings ()
     (let* ((template (get-style-file template-name data-db))
            (index-template
             (get-style-file (or index-template-name *style-index-file*) data-db)))
-      (setf plist (append plist *settings*))
       (unless (getf plist :home) (setf (getf plist :home) "."))
-      (setf (getf plist :blocks) (get-blocks))
-      (setf (getf plist :page-content)
-            (fill-and-print-to-string template plist))
+      (setf plist
+            `(:blocks ,(get-blocks)
+              :page-content ,(fill-and-print-to-string template plist)
+               ,@(compute-months-and-years-link-plist month year data-db)
+               ,@plist
+               ,@*settings*))
       (let* ((res (fill-and-print-to-string index-template plist)))
         (loop for new-res = (fill-and-print-to-string res plist)
            until (equal res new-res)
@@ -328,9 +331,13 @@
          :prev-url ,prev-url
          :next-url ,next-url)))
 
+(defconstant $filtered-html-format 1)
+(defconstant $full-html-format 3)
+(defconstant $raw-html-format 5)
+
 (defun make-node-plist (node &key (comments-p t) (data-db *data-db*))
   (with-settings ()
-    (let* ((plist (or (if (listp node) node (data-get $NODES node :db data-db))
+    (let* ((plist (or (if (listp node) node (read-node node data-db))
                       (error "Node does not exist: ~s" node)))
            (created (getf plist :created))
            (status (getf plist :status))
@@ -338,7 +345,7 @@
            (format (getf plist :format))
            (user-plist (data-get $USERS uid :db data-db)))
       (when (eql status 1)
-        (unless (eql format 6)
+        (unless (eql format $raw-html-format)
           (setf plist (do-drupal-formatting plist)))
         (setf (getf plist :post-date)
               (unix-time-to-rfc-1123-string created))

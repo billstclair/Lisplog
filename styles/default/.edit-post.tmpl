@@ -1,5 +1,9 @@
 <h2 class="content-title"><!-- TMPL_IF node-num -->Edit Post #<!-- TMPL_VAR node-num --><!-- TMPL_ELSE -->Add Post<!-- /TMPL_IF --></h2>
-<br/>
+<br/><!-- TMPL_IF preview -->
+Preview:
+<div class="preview">
+  <!-- TMPL_VAR preview -->
+</div><!-- /TMPL_IF -->
 <div class="edit-post"><!-- TMPL_IF errmsg -->
   <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF -->
   <form action="admin/submit_post" method="post"><!-- TMPL_IF node-num -->
@@ -7,8 +11,8 @@
     <fieldset>
       <table>
         <tr>
-          <td><span class="label">Author:</span> <span class="form-required">*</span></td>
-          <td><input type="text" name="author" size="30" value="<!-- TMPL_VAR author -->"/></td>
+          <td><span class="label">Author:</span></td>
+          <td><!-- TMPL_VAR author --></td>
         </tr><tr>
           <td><span class="label">Time:</span> <span class="form-required">*</span></td>
           <td><input type="text" name="post-time" size="30" value="<!-- TMPL_VAR post-time -->"/><td>
@@ -28,9 +32,7 @@
     </fieldset>
     <br/>
     <span class="label">Body:</span> <span class="form-required">*</span><br/>
-    <textarea wrap="virtual" cols="80" rows="20" name="body">
-<!-- TMPL_VAR body -->
-    </textarea>
+    <textarea wrap="virtual" cols="80" rows="20" name="body"><!-- TMPL_VAR body --></textarea>
     <br/>
     <fieldset>
       <legend>Input format</legend>

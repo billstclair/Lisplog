@@ -9,9 +9,7 @@ Latest comments block on home page.
 Dynamic server
 ==============
 
-Login/Permissions (initially just administrator and existing logins)
-Re-render subsets of the site or whole site.
-Dynamic serving. Is it faster? Is it faster if I preload the data?
+do-drupal-formatting needs to support filtered-html and auto-links.
 
 Edit/Create posts
 Edit/Create comments
@@ -26,6 +24,9 @@ Comment moderation.
 Apache redirect for admin/
 
 Go LIVE!
+
+Re-render subsets of the site or whole site.
+Dynamic serving. Is it faster? Is it faster if I preload the data?
 
 New users/moderation
 Change/initialize settings
