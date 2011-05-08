@@ -275,3 +275,11 @@ blockquote {
 .center p {
    text-align: center;
 }
+
+.preview {
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  padding-left: 5px;
+  border: solid 1px #ccc;
+}
