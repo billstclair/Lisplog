@@ -12,10 +12,10 @@ Preview:
       <table>
         <tr>
           <td><span class="label">Author:</span></td>
-          <td><!-- TMPL_VAR author --></td>
+          <td><!-- TMPL_VAR author --></td><!-- TMPL_IF post-time -->
         </tr><tr>
-          <td><span class="label">Time:</span> <span class="form-required">*</span></td>
-          <td><input type="text" name="post-time" size="30" value="<!-- TMPL_VAR post-time -->"/><td>
+          <td><span class="label">Time:</span></td>
+          <td><!-- TMPL_VAR post-time --><td><!-- /TMPL_IF -->
         </tr><tr>
           <td><span class="label">Title:</span> <span class="form-required">*</span></td>
           <td><input type="text" name="title" size="50" value="<!-- TMPL_VAR title -->"/></td>

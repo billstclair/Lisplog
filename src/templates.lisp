@@ -335,6 +335,9 @@
 (defconstant $full-html-format 3)
 (defconstant $raw-html-format 5)
 
+(defparameter *valid-post-format-values*
+  (list $filtered-html-format $full-html-format $raw-html-format))
+
 (defun make-node-plist (node &key (comments-p t) (data-db *data-db*))
   (with-settings ()
     (let* ((plist (or (if (listp node) node (read-node node data-db))

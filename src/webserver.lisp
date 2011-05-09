@@ -70,11 +70,10 @@
 
 ;; <baseurl>/admin/submit_post
 (hunchentoot:define-easy-handler (handle-submit-post :uri "/submit_post")
-    (uri https node-num post-time title alias published promoted body
+    (uri https node-num title alias published promoted body
          input-format preview submit delete)
   (submit-post uri https
                :node-num node-num
-               :post-time post-time
                :title title
                :alias alias
                :published published
@@ -104,10 +103,10 @@
         (db (get-port-db)))
     (unless (and session (uid-of session))
       (with-settings (db)
-        (let ((plist `(:username ,username
-                       :errmsg ,errmsg
-                       :hidden-values ((:name "query-string"
-                                        :value ,query-string)))))
+        (let ((plist (list :username username
+                           :errmsg errmsg
+                           :hidden-values `((:name "query-string"
+                                                   :value ,query-string)))))
           (multiple-value-bind (base home) (compute-base-and-home uri https)
             (setf (getf plist :home) home
                   (getf plist :base) base))
@@ -182,10 +181,10 @@
          (errmsg (or (cdr (assoc (ignore-errors (parse-integer errnum))
                                  *error-alist*))
                      "Unknown error"))
-         (plist `(:home ".."
-                 :title "Error"
-                 :errnum ,errnum
-                 :errmsg ,errmsg)))
+         (plist (list :home ".."
+                      :title "Error"
+                      :errnum errnum
+                      :errmsg errmsg)))
     (render-template ".error.tmpl" plist :data-db db)))
 
 ;; <baseurl>/admin/?node=<node-num>
@@ -198,9 +197,9 @@
       (when plist
         (unless alias
           (setf alias (car (getf plist :aliases))))
-        (setf plist `(:posts
-                      (,plist)
-                      :page-title ,(getf plist :title)))
+        (setf plist (list :posts
+                          (list plist)
+                          :page-title (getf plist :title)))
         (multiple-value-bind (base home) (compute-base-and-home uri https)
           (setf (getf plist :home) home
                 (getf plist :base) base
@@ -244,8 +243,8 @@
        for tid = (getf cat :tid)
        for name = (getf cat :name)
        for selected = (member tid node-cats)
-       collect `(:value ,tid :label ,name
-                 ,@(and selected '(:selected t))))))
+       collect (list* :value tid :label name
+                      (and selected '(:selected t))))))
 
 ;; <baseurl>/admin/?edit_post=<node-num>
 (defun edit-post (node-num uri https)
@@ -272,21 +271,83 @@
       (return-from edit-post
         (redirect-to-error-page uri https $no-add-or-edit-permission)))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
-      (setf plist `(:node-num ,node-num
-                    :home ,home
-                    :base ,base
-                    :author ,(efh author)
-                    :post-time ,(unix-time-to-rfc-1123-string created)
-                    :title ,(efh title)
-                    :alias ,(efh alias)
-                    :published ,(eql status 1)
-                    :promoted ,(eql promote 1)
-                    :body ,(efh body)
-                    ,@(node-format-to-edit-post-plist format)
-                    :category-options ,(node-to-edit-post-category-options node db))))
+      (setf plist (list* :node-num node-num
+                        :home home
+                        :base base
+                        :author (efh author)
+                        :post-time (unix-time-to-rfc-1123-string created)
+                        :title (efh title)
+                        :alias (efh alias)
+                        :published (eql status 1)
+                        :promoted (eql promote 1)
+                        :body (efh body)
+                        :category-options (node-to-edit-post-category-options
+                                           node db)
+                        (node-format-to-edit-post-plist format))))
     (render-template ".edit-post.tmpl" plist :data-db db)))
 
-(defun submit-post (uri https &key node-num post-time title alias published
+(defun save-updated-node (node &key (db *data-db*)
+                          title uid body
+                          created alias categories
+                          (status 1)
+                          (promote 1)
+                          (format $filtered-html-format))
+  (check-type title string)
+  (check-type uid integer)
+  (check-type body string)
+  (check-type created (or null integer))
+  (check-type alias (or null string))
+  (check-type categories list)
+  (check-type status integer)
+  (check-type promote integer)
+  (assert (member format *valid-post-format-values*))
+  (assert (not (or (blankp title) (blankp uid) (blankp body))))
+  (let ((new-p (null node))
+        (now (get-unix-time))
+        (new-alias-p nil)
+        (delete-aliases-p nil))
+    (setf alias (compute-new-alias title alias db))
+    (when (blankp created)
+      (setf created now))
+    (cond (new-p
+           (setf node (list :aliases (list alias)
+                            :nid (allocate-nid db)
+                            :title title
+                            :uid uid
+                            :status status
+                            :created created
+                            :changed now
+                            :promote promote
+                            :body body
+                            :format format)
+                 new-alias-p t))
+          (t (setf (getf node :changed) now)
+             (unless (member alias (getf node :aliases) :test #'string=)
+               (push alias (getf node :aliases))
+               (setf new-alias-p t))
+             (unless (string= title (getf node :title))
+               (setf (getf node :title) title
+                     new-alias-p t))
+             (unless (eql status (getf node :status))
+               (setf (getf node :status) status
+                     new-alias-p t)
+               (unless (eql status 1)
+                 (setf delete-aliases-p t)))
+             (setf (getf node :changed) now
+                   (getf node :promote) promote
+                   (getf node :body) body
+                   (getf node :format) format)))
+    (setf (read-node (getf node :nid) db) node)
+    (when delete-aliases-p
+      ;; Post is no longer visible.
+      ;; Delete all sign of it from the public web site
+      )
+    (when new-alias-p
+      ;; Have to redo year and month pages
+      )
+    alias))
+
+(defun submit-post (uri https &key node-num title alias published
                     promoted body input-format preview submit delete)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
@@ -295,7 +356,8 @@
          (author (getf user :name))
          (permissions (getf user :permissions))
          (node (read-node node-num db))
-         (created (ignore-errors (rfc-1123-string-to-unix-time post-time)))
+         (created (getf node :created))
+         (post-time (and created (unix-time-to-rfc-1123-string created)))
          (promote (if (blankp promoted) 0 1))
          (status (if (blankp published) 0 1))
          (categories (mapcar 'parse-integer
@@ -304,12 +366,7 @@
          (format (node-format-name-to-number input-format))
          (errmsg nil)
          plist)
-    (cond ((null created)
-           (setf errmsg
-                 "Badly formatted date. Should be: \"Day, date mon year hh:mm:ss GMT\"")
-           (when (and (blankp post-time) (setf created (getf node :created)))
-             (setf post-time (unix-time-to-rfc-1123-string created))))
-          ((blankp title)
+    (cond ((blankp title)
            (setf errmsg "Title may not be blank")
            (when node
              (setf title (getf node :title))))
@@ -327,44 +384,57 @@
     (cond ((or preview errmsg)
            (multiple-value-bind (base home) (compute-base-and-home uri https)
              (setf plist
-                   `(:node-num ,node-num
-                     :home ,home
-                     :base ,base
-                     :errmsg ,(efh errmsg)
-                     :author ,(efh author)
-                     :post-time ,post-time
-                     :title ,(efh title)
-                     :alias ,(efh alias)
-                     :published ,(eql status 1)
-                     :promoted ,(eql promote 1)
-                     :body ,(efh body)
-                     ,@(node-format-to-edit-post-plist format)
-                     :category-options ,(node-to-edit-post-category-options
-                                         categories db)))
+                   (list* :node-num node-num
+                          :home home
+                          :base base
+                          :errmsg (efh errmsg)
+                          :author (efh author)
+                          :post-time post-time
+                          :title (efh title)
+                          :alias (efh alias)
+                          :published (eql status 1)
+                          :promoted (eql promote 1)
+                          :body (efh body)
+                          :category-options (node-to-edit-post-category-options
+                                             categories db)
+                          (node-format-to-edit-post-plist format)))
              (when preview
                (let* ((template-name (get-post-template-name db))
                       (template (get-style-file template-name db))
                       (node-plist
                        (make-node-plist
-                        `(:nid ,node-num
-                          :uid ,uid
-                          :title ,title
-                          :aliases ,(list alias)
-                          :created ,created
-                          :status 1
-                          :body ,body
-                          :format ,format
-                          :home ,home)
+                        (list :nid node-num
+                              :uid uid
+                              :title title
+                              :aliases (list alias)
+                              :created created
+                              :status 1
+                              :body body
+                              :format format
+                              :home home)
                         :comments-p nil
                         :data-db db)))
                  (setf (getf node-plist :no-editing) t
                        (getf node-plist :permalink) (efh alias))
-                 (setf node-plist `(:posts (,node-plist)))
-                 (setf plist
-                       `(:preview ,(fill-and-print-to-string template node-plist)
-                                  ,@plist)))))
+                 (setf node-plist (list :posts (list node-plist)))
+                 (setf (getf plist :preview)
+                       (fill-and-print-to-string template node-plist)))))
            (render-template ".edit-post.tmpl" plist :data-db db))
-          (submit "Submit not done yet")
+          (submit
+           (setf alias
+                 (save-updated-node node
+                                    :db db
+                                    :alias alias
+                                    :title title
+                                    :uid uid
+                                    :created created
+                                    :status status
+                                    :promote promote
+                                    :body body
+                                    :categories categories
+                                    :format format))
+           (let ((base (compute-base-and-home uri https)))
+             (hunchentoot:redirect (format nil "~a~a" base alias))))
           (delete "Delete not done yet"))))
 
 ;; <baseurl>/admin/?add_comment=<node-num>
