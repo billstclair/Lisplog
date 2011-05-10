@@ -75,10 +75,10 @@
 (defvar *session-hash* (make-hash-table :test 'equal))
 
 (defvar *session-lock*
-  (bordeaux-threads:make-recursive-lock "*session-lock*"))
+  (bt:make-recursive-lock "*session-lock*"))
 
 (defmacro with-session-lock (&body body)
-  `(bordeaux-threads:with-recursive-lock-held (*session-lock*)
+  `(bt:with-recursive-lock-held (*session-lock*)
      ,@body))
 
 (defun make-session (&key

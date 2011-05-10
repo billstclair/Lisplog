@@ -286,7 +286,16 @@
                         (node-format-to-edit-post-plist format))))
     (render-template ".edit-post.tmpl" plist :data-db db)))
 
-(defun save-updated-node (node &key (db *data-db*)
+(defvar *node-save-lock*
+  (bt:make-recursive-lock "*node-save-lock*"))
+
+(defmacro with-node-save-lock (&body body)
+  `(bt:with-recursive-lock-held (*node-save-lock*)
+     ,@body))
+
+(defun save-updated-node (node &key
+                          (data-db *data-db*)
+                          (site-db *site-db*)
                           title uid body
                           created alias categories
                           (status 1)
@@ -302,50 +311,61 @@
   (check-type promote integer)
   (assert (member format *valid-post-format-values*))
   (assert (not (or (blankp title) (blankp uid) (blankp body))))
-  (let ((new-p (null node))
-        (now (get-unix-time))
-        (new-alias-p nil)
-        (delete-aliases-p nil))
-    (setf alias (compute-new-alias title alias db))
-    (when (blankp created)
-      (setf created now))
-    (cond (new-p
-           (setf node (list :aliases (list alias)
-                            :nid (allocate-nid db)
-                            :title title
-                            :uid uid
-                            :status status
-                            :created created
-                            :changed now
-                            :promote promote
-                            :body body
-                            :format format)
-                 new-alias-p t))
-          (t (setf (getf node :changed) now)
-             (unless (member alias (getf node :aliases) :test #'string=)
-               (push alias (getf node :aliases))
-               (setf new-alias-p t))
-             (unless (string= title (getf node :title))
-               (setf (getf node :title) title
-                     new-alias-p t))
-             (unless (eql status (getf node :status))
-               (setf (getf node :status) status
-                     new-alias-p t)
-               (unless (eql status 1)
-                 (setf delete-aliases-p t)))
-             (setf (getf node :changed) now
-                   (getf node :promote) promote
-                   (getf node :body) body
-                   (getf node :format) format)))
-    (setf (read-node (getf node :nid) db) node)
-    (when delete-aliases-p
-      ;; Post is no longer visible.
-      ;; Delete all sign of it from the public web site
-      )
-    (when new-alias-p
-      ;; Have to redo year and month pages
-      )
-    alias))
+  (with-node-save-lock
+    (let ((new-p (null node))
+          (now (get-unix-time))
+          (new-alias-p nil)
+          (delete-aliases-p nil))
+      (setf alias (compute-new-alias title alias data-db))
+      (when (blankp created)
+        (setf created now))
+      (cond (new-p
+             (setf node (list :aliases (list alias)
+                              :nid (allocate-nid data-db)
+                              :title title
+                              :uid uid
+                              :status status
+                              :created created
+                              :changed now
+                              :promote promote
+                              :body body
+                              :format format)
+                   new-alias-p t))
+            (t (setf (getf node :changed) now)
+               (let ((aliases (getf node :aliases)))
+                 (unless (string= alias (car aliases))
+                   (setf aliases (delete alias aliases :test #'string=))
+                   (push alias aliases)
+                   (setf (getf node :aliases) aliases)
+                   (setf new-alias-p t)))
+               (unless (string= title (getf node :title))
+                 (setf (getf node :title) title
+                       new-alias-p t))
+               (unless (eql status (getf node :status))
+                 (setf (getf node :status) status
+                       new-alias-p t)
+                 (unless (eql status 1)
+                   (setf delete-aliases-p t)))
+               (setf (getf node :changed) now
+                     (getf node :promote) promote
+                     (getf node :body) body
+                     (getf node :format) format)
+               (let ((old-categories
+                      (loop for (cat) on (getf node :cat-neighbors) by #'cddr
+                         collect cat)))
+                 (unless (null (set-difference categories old-categories))
+                   (setf node (update-node-categories
+                               node categories old-categories data-db))))))
+      (setf (read-node (getf node :nid) data-db) node)
+      (cond (delete-aliases-p
+             (remove-node-from-site node :data-db data-db :site-db site-db))
+            (t (render-node node :data-db data-db :site-db site-db)))
+      (when new-alias-p
+        (update-node-year-and-month-pages node :data-db data-db :site-db site-db))
+      ;; Don't always have to do this, but figuring out when
+      ;; is harder than just doing it.
+      (render-site-index :data-db data-db :site-db site-db)
+      alias)))
 
 (defun submit-post (uri https &key node-num title alias published
                     promoted body input-format preview submit delete)
