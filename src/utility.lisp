@@ -32,6 +32,8 @@
 (defun ensure-list (x)
   (if (listp x) x (list x)))
 
+;; This doesn't work right. Don't use it.
+#+not
 (define-setf-expander assqv (key alist &environment env)
   (multiple-value-bind (dummies vals stores setter getter)
       (get-setf-expansion alist env)

@@ -122,6 +122,27 @@
                               :key #'cdr)))))))))
     (terpri)))
 
+(defun update-node-year-index (node &optional (db *data-db*))
+  (when (integerp node)
+    (setf node (read-node node db)))
+  (let ((created (getf node :created)))
+    (multiple-value-bind (y m) (decode-ymd created)
+      (let* ((ys (prin1-to-string y))
+             (ms (prin1-to-string m))
+             (nid (getf node :nid))
+             (posts (awhen (fsdb:db-get db $YEARS ys ms)
+                      (read-from-string it)))
+             (cell (assoc nid posts)))
+        (unless (and cell (eql (cdr cell) created))
+          (setf posts (merge 'list
+                             (delete nid posts :key #'car)
+                             `((,nid . ,created))
+                             #'<
+                             :key #'cdr))
+          (setf (fsdb:db-get db $YEARS ys ms)
+                (prin1-to-string posts))
+          (values y m))))))
+
 (defun get-years-before-time (unix-time &optional (db *data-db*))
   "Return a list of this year and older years that have posts,
 as integers."
@@ -305,6 +326,10 @@ as integers."
        do
          (multiple-value-bind (y m d) (decode-ymd (cdr info))
            (declare (ignore y m))
+           (let ((cell (assoc d day-alist)))
+             (if cell
+                 (push info (cdr cell))
+                 (push (list d info) day-alist)))
            (push info (assqv d day-alist))))
         (sort day-alist #'< :key #'car)))
 
@@ -413,7 +438,19 @@ as integers."
           (render-template (get-year-template db) plist))
     url))
 
-(defun render-site (&key (db *data-db*) (site-db *site-db*) (verbose t))
+(defun update-node-year-and-month-pages (node &key
+                                         (data-db *data-db*)
+                                         (site-db *site-db*))
+  (when (integerp node)
+    (setf node (read-node node data-db)))
+  (multiple-value-bind (y m)
+      (update-node-year-index node data-db)
+    (when y
+      (render-month-page y m :db data-db :site-db site-db)
+      (render-year-page y :db data-db :site-db site-db))))
+
+(defun render-site (&key (db *data-db*) (site-db *site-db*) (verbose t)
+                    (year-and-month-pages-only-p nil))
   (let ((count 0))
     (macrolet ((rendering (form)
                  `(loop
@@ -431,9 +468,10 @@ as integers."
           (dolist (month (get-months-of-year year db))
             (rendering (render-month-page year month :db db :site-db site-db))
             (incf count)
-            (dolist (info (get-month-post-info year month :db db))
-              (rendering (render-node (car info) :data-db db :site-db site-db))
-              (incf count))))
+            (unless year-and-month-pages-only-p
+              (dolist (info (get-month-post-info year month :db db))
+                (rendering (render-node (car info) :data-db db :site-db site-db))
+                (incf count)))))
         (rendering (render-site-index :data-db db :site-db site-db))))
     count))
 

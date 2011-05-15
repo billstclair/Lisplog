@@ -407,7 +407,7 @@
 (defun render-site-index (&key (data-db *data-db*) (site-db *site-db*))
   (let* ((node-plists (get-node-plists-for-index-page data-db))
          (my-links (multiple-value-bind (y m)
-                       (decode-ym (getf (car node-plists) :created))
+                       (decode-ymd (getf (car node-plists) :created))
                      (compute-months-and-years-link-plist y m data-db)))
          (plist `(:posts ,node-plists ,@my-links))
          (post-template-name (get-post-template-name data-db))

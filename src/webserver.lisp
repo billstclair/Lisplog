@@ -443,7 +443,7 @@
           (submit
            (setf alias
                  (save-updated-node node
-                                    :db db
+                                    :data-db db
                                     :alias alias
                                     :title title
                                     :uid uid

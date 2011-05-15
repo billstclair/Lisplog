@@ -20,4 +20,4 @@
     (swank:create-server :port port :dont-close t)))
 
 (defun reload ()
-  (ql:quickload "lisplog"))
+  (ql:quickload "lisplog" :verbose t))
