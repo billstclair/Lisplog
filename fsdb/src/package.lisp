@@ -27,6 +27,7 @@
    #:fsdb
    #:db-put
    #:db-get
+   #:db-probe
    #:db-lock
    #:db-unlock
    #:db-contents

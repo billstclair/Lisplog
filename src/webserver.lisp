@@ -293,6 +293,50 @@
   `(bt:with-recursive-lock-held (*node-save-lock*)
      ,@body))
 
+(defun compute-alias-from-title (title)
+  (let ((alias (string-downcase
+                (fsdb:str-replace
+                 " " "_"
+                 (delete-if-not (lambda (ch)
+                                  (or (digit-char-p ch)
+                                      (alpha-char-p ch)
+                                      (member ch '(#\space #\_))))
+                                title))))
+        new-alias)
+    (loop
+       (setf new-alias (fsdb:str-replace "__" "_" alias))
+       (when (equal new-alias alias) (return))
+       (setf alias new-alias))
+    (strcat alias ".html")))
+
+(defun compute-new-alias (node title alias &key (data-db *data-db*) (site-db *site-db*))
+  (when (integerp node)
+    (setf node (read-node node data-db)))
+  (when (blankp title)
+    (setf title (getf node :title)))
+  (when (blankp alias)
+    (setf alias (compute-alias-from-title title)))
+  (let ((len (length alias))
+        (html-p t)
+        (aliases (getf node :aliases)))
+    (unless (or (member alias aliases :test #'equal)
+                (not (fsdb:db-get site-db alias)))
+      (when (eql (search ".html" alias :from-end t :test #'equal)
+                 (- len 5))
+        (setf alias (subseq alias 0 (- len 5))))
+      ;; Support Windows folks who like .htm
+      (when (eql (search ".htm" alias :from-end t :test #'equal)
+                 (- len 4))
+        (setf alias (subseq alias 0 (- len 4))
+              html-p nil))
+      (loop for i from 2
+         for new-alias = (format nil "~a_~d.~a" alias i (if html-p "html" "htm"))
+         unless (fsdb:db-probe site-db new-alias)
+         do
+           (setf alias new-alias)
+           (return))))
+  alias)
+
 (defun save-updated-node (node &key
                           (data-db *data-db*)
                           (site-db *site-db*)
@@ -315,8 +359,11 @@
     (let ((new-p (null node))
           (now (get-unix-time))
           (new-alias-p nil)
-          (delete-aliases-p nil))
-      (setf alias (compute-new-alias title alias data-db))
+          (delete-aliases-p nil)
+          new-alias)
+      (setf new-alias (compute-new-alias node title alias
+                                         :data-db data-db
+                                         :site-db site-db))
       (when (blankp created)
         (setf created now))
       (cond (new-p
@@ -333,9 +380,11 @@
                    new-alias-p t))
             (t (setf (getf node :changed) now)
                (let ((aliases (getf node :aliases)))
-                 (unless (string= alias (car aliases))
-                   (setf aliases (delete alias aliases :test #'string=))
-                   (push alias aliases)
+                 (unless (string= new-alias (car aliases))
+                   (when alias
+                     (setf aliases (delete alias aliases :test #'string=)))
+                   (setf aliases (delete new-alias aliases :test #'string=))
+                   (push new-alias aliases)
                    (setf (getf node :aliases) aliases)
                    (setf new-alias-p t)))
                (unless (string= title (getf node :title))

@@ -134,6 +134,12 @@
           (when (probe-file filename) (delete-file filename))
           (file-put-contents filename value)))))
 
+(defmethod db-probe ((db fsdb) key &rest more-keys)
+  (declare (dynamic-extent more-keys))
+  (let ((key (%append-db-keys key more-keys)))
+    (with-fsdb-filename (db filename key)
+      (probe-file filename))))
+
 (defmethod db-lock ((db fsdb) key)
   (grab-file-lock (db-filename db key)))
 
