@@ -337,6 +337,33 @@
            (return))))
   alias)
 
+;; Remove all html pages for NODE, except index.html, which needs to be
+;; regenerated after calling this.
+;; Remove NODE from its year and month pages.
+;; Unsplice NODE from the :cat-neighbors lists in its neighbors
+;; Don't need to remove node from its catnodes files.
+(defun remove-node-from-site (node &key (data-db *data-db*) (site-db *site-db*))
+  (when (integerp node)
+    (setf node (read-node node data-db)))
+  (dolist (alias (getf node :aliases))
+    (setf (fsdb:db-get site-db alias) nil))
+  (update-node-year-and-month-pages node :data-db data-db :site-db site-db)
+  (loop with nid = (getf node :nid)
+     with cat-neighbors = (getf node :cat-neighbors)
+     for (cat (prev . next)) on cat-neighbors by #'cddr
+     do
+       (unless (or (eql prev nid) (eql next nid))
+         (let* ((prev-node (read-node prev data-db))
+                (prev.next (getf cat (getf prev-node :cat-neighbors))))
+           (when (and prev.next (eql (cdr prev.next) nid))
+             (setf (cdr prev.next) next)
+             (setf (read-node prev data-db) prev-node)))
+         (let* ((next-node (read-node next data-db))
+                (prev.next (getf cat (getf next-node :cat-neighbors))))
+           (when (and prev.next (eql (car prev.next) nid))
+             (setf (car prev.next) prev)
+             (setf (read-node next data-db) next-node))))))
+
 (defun save-updated-node (node &key
                           (data-db *data-db*)
                           (site-db *site-db*)
@@ -360,6 +387,7 @@
           (now (get-unix-time))
           (new-alias-p nil)
           (delete-aliases-p nil)
+          (nid (getf node :nide))
           new-alias)
       (setf new-alias (compute-new-alias node title alias
                                          :data-db data-db
@@ -368,7 +396,7 @@
         (setf created now))
       (cond (new-p
              (setf node (list :aliases (list alias)
-                              :nid (allocate-nid data-db)
+                              :nid (setf nid (allocate-nid data-db))
                               :title title
                               :uid uid
                               :status status
@@ -391,10 +419,9 @@
                  (setf (getf node :title) title
                        new-alias-p t))
                (unless (eql status (getf node :status))
-                 (setf (getf node :status) status
-                       new-alias-p t)
-                 (unless (eql status 1)
-                   (setf delete-aliases-p t)))
+                 (setf (getf node :status) status)
+                 (cond ((eql status 1) (setf new-alias-p t))
+                       (t (setf delete-aliases-p t))))
                (setf (getf node :changed) now
                      (getf node :promote) promote
                      (getf node :body) body
@@ -405,9 +432,10 @@
                  (unless (null (set-difference categories old-categories))
                    (setf node (update-node-categories
                                node categories old-categories data-db))))))
-      (setf (read-node (getf node :nid) data-db) node)
+      (setf (read-node nid data-db) node)
       (cond (delete-aliases-p
-             (remove-node-from-site node :data-db data-db :site-db site-db))
+             (remove-node-from-site node :data-db data-db :site-db site-db)
+             (setf alias (format nil "admin/?node=~d" nid)))
             (t (render-node node :data-db data-db :site-db site-db)))
       (when new-alias-p
         (update-node-year-and-month-pages node :data-db data-db :site-db site-db))
