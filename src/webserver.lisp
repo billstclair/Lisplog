@@ -246,6 +246,64 @@
        collect (list* :value tid :label name
                       (and selected '(:selected t))))))
 
+(defun update-node-categories (node categories old-categories &key
+                               (data-db *data-db*)
+                               (site-db *site-db*))
+  (when (integerp node)
+    (setf node (read-node node data-db)))
+  (let ((nid (getf node :nid))
+        (created (getf node :created))
+        (neighbors (getf node :cat-neighbors))
+        (added (set-difference categories old-categories))
+        (removed (set-difference old-categories categories)))
+    (dolist (cat removed)
+      (let* ((prev.next (getf neighbors cat))
+             (prev-nid (car prev.next))
+             (next-nid (cdr prev.next)))
+        (unless (or (eql prev-nid nid) (eql next-nid nid))
+          (let* ((prev (read-node prev-nid data-db))
+                 (prev.next (getf (getf prev :cat-neighbors) cat)))
+            (when (consp prev.next)
+              (setf (cdr prev.next) next-nid
+                    (read-node prev-nid data-db) prev)
+              (render-node prev :data-db data-db :site-db site-db))
+          (let* ((next (read-node next-nid data-db))
+                 (prev.next (getf (getf next :cat-neighbors) cat)))
+            (when (consp prev.next)
+              (setf (car prev.next) prev-nid
+                    (read-node next-nid data-db) next)
+              (render-node next :data-db data-db :site-db site-db))))))
+      (remf cat neighbors)
+      (let ((catnodes (delete nid (read-catnodes cat data-db) :key #'car)))
+        (setf (read-catnodes cat data-db) catnodes)))
+    (dolist (cat added)
+      (let ((catnodes (delete nid (read-catnodes cat data-db) :key #'car)))
+        (setf catnodes (merge 'list `((,nid . ,created)) catnodes #'< :key #'cdr))
+        (setf (read-catnodes cat data-db) catnodes)
+        (loop for tail on catnodes
+           for prev-cell = nil then cell
+           for cell = (car tail)
+           when (eql nid (car cell)) do
+             (unless prev-cell (setf prev-cell (car (last tail))))
+             (let* ((next-cell (if (cdr tail) (cadr tail) (car catnodes)))
+                    (prev-nid (car prev-cell))
+                    (next-nid (car next-cell)))
+               (setf (getf neighbors cat) (cons prev-nid next-nid))
+               (let* ((prev (read-node prev-nid data-db))
+                 (prev.next (getf (getf prev :cat-neighbors) cat)))
+                 (when (consp prev.next)
+                   (setf (cdr prev.next) nid
+                         (read-node prev-nid data-db) prev)
+                   (render-node prev :data-db data-db :site-db site-db)))
+               (let* ((next (read-node next-nid data-db))
+                      (prev.next (getf (getf next :cat-neighbors) cat)))
+                 (when (consp prev.next)
+                   (setf (car prev.next) nid
+                         (read-node next-nid data-db) next)
+                   (render-node next :data-db data-db :site-db site-db)))))))
+    (setf (getf node :cat-neighbors) neighbors)
+    node))
+
 ;; <baseurl>/admin/?edit_post=<node-num>
 (defun edit-post (node-num uri https)
   (let* ((session hunchentoot:*session*)
@@ -387,7 +445,7 @@
           (now (get-unix-time))
           (new-alias-p nil)
           (delete-aliases-p nil)
-          (nid (getf node :nide))
+          (nid (getf node :nid))
           new-alias)
       (setf new-alias (compute-new-alias node title alias
                                          :data-db data-db
@@ -429,9 +487,12 @@
                (let ((old-categories
                       (loop for (cat) on (getf node :cat-neighbors) by #'cddr
                          collect cat)))
-                 (unless (null (set-difference categories old-categories))
+                 (unless (eql (length old-categories)
+                              (length (union categories old-categories)))
                    (setf node (update-node-categories
-                               node categories old-categories data-db))))))
+                               node categories old-categories
+                               :data-db data-db
+                               :site-db site-db))))))
       (setf (read-node nid data-db) node)
       (cond (delete-aliases-p
              (remove-node-from-site node :data-db data-db :site-db site-db)
