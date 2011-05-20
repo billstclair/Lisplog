@@ -76,12 +76,12 @@
 (defun read-settings (&optional data-db)
   (unless data-db
     (setf data-db *data-db*))
-  (node-get data-db nil $SETTINGS :subdirs-p nil))
+  (sexp-get data-db nil $SETTINGS :subdirs-p nil))
 
 (defun (setf read-settings) (value &optional data-db)
   (unless data-db
     (setf data-db *data-db*))
-  (setf (node-get data-db nil $SETTINGS :subdirs-p nil) value))
+  (setf (sexp-get data-db nil $SETTINGS :subdirs-p nil) value))
 
 (defmacro with-settings ((&optional data-db) &body body)
   (let ((thunk (gensym "THUNK")))
@@ -97,28 +97,57 @@
 ;;;
 
 (defun data-get (dir file &key (db *data-db*) (subdirs-p t))
-  (node-get db dir file :subdirs-p subdirs-p))
+  (sexp-get db dir file :subdirs-p subdirs-p))
 
 (defun (setf data-get) (value dir file &key (db *data-db*) (subdirs-p t))
-  (setf (node-get db dir file :subdirs-p subdirs-p) value))
+  (setf (sexp-get db dir file :subdirs-p subdirs-p) value))
 
 (defun read-node (node &optional (db *data-db*))
-  (node-get db $NODES node))
+  (sexp-get db $NODES node))
 
 (defun (setf read-node) (plist node &optional (db *data-db*))
-  (setf (node-get db $NODES node) plist))
+  (setf (sexp-get db $NODES node) plist))
+
+(defun probe-node (nid &optional (db *data-db*))
+  (sexp-probe db $NODES nid))
 
 (defun read-comment (comment &optional (db *data-db*))
-  (node-get db $COMMENTS comment))
+  (sexp-get db $COMMENTS comment))
 
 (defun (setf read-comment) (plist comment &optional (db *data-db*))
-  (setf (node-get db $COMMENTS comment) plist))
+  (setf (sexp-get db $COMMENTS comment) plist))
 
 (defun read-user (user-num &optional (db *data-db*))
-  (node-get db $USERS user-num))
+  (sexp-get db $USERS user-num))
 
 (defun (setf read-user) (plist user-num &optional (db *data-db*))
-  (setf (node-get db $USERS user-num) plist))
+  (setf (sexp-get db $USERS user-num) plist))
+
+(defun read-nid (&optional (db *data-db*))
+  (let ((nid-string (fsdb:db-get db $COUNTERS $NID))
+        nid)
+    (cond (nid-string (setf nid (parse-integer nid-string)))
+          (t
+           (let ((max-nid 0))
+             (do-nodes (node db)
+               (let ((nid (getf node :nid)))
+                 (when (and nid (> nid max-nid))
+                   (setf max-nid nid))))
+             (setf nid max-nid
+                   (read-nid db) nid))))
+    nid))
+
+(defun (setf read-nid) (nid &optional (db *data-db*))
+  (setf (fsdb:db-get db $COUNTERS $NID) (princ-to-string nid))
+  nid)
+
+(defun allocate-nid (&optional (db *data-db*))
+  (let ((nid (read-nid db)))
+    (loop
+       (unless (probe-node nid db) (return))
+       (incf nid))
+    (setf (read-nid db) nid)))
+
 
 (defun user-permission-p (user-num permission &optional (db *data-db*))
   (not (null (memq permission (getf (read-user user-num db) :permissions)))))
@@ -134,13 +163,13 @@
     value))
 
 (defun read-catnodes (cat &optional (db *data-db*))
-  (node-get db $CATNODES cat :subdirs-p nil))
+  (sexp-get db $CATNODES cat :subdirs-p nil))
 
 (defun (setf read-catnodes) (value cat &optional (db *data-db*))
-  (setf (node-get db $CATNODES can :subdirs-p nil) value))
+  (setf (sexp-get db $CATNODES cat :subdirs-p nil) value))
 
 (defun read-category (cat &optional (db *data-db*))
-  (node-get db $CATEGORIES cat :subdirs-p nil))
+  (sexp-get db $CATEGORIES cat :subdirs-p nil))
 
 (defun fill-and-print-to-string (template values)
   (with-output-to-string (stream)
