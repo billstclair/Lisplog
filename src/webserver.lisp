@@ -50,13 +50,13 @@
 (hunchentoot:define-easy-handler (handle-admin :uri "/")
     (node edit_post add_comment edit_comment uri https error)
   (setf (hunchentoot:content-type*) "text/html")
-  (acond (node (render-web-node node uri https))
-         ((login-screen uri https))
-         (edit_post (edit-post edit_post uri https))
-         (add_comment (add-comment add_comment uri https))
-         (edit_comment (edit-comment edit_comment uri https))
-         (error (error-page error))
-         (t (not-found))))
+  (cond ((login-screen uri https))
+        (node (render-web-node node uri https))
+        (edit_post (edit-post edit_post uri https))
+        (add_comment (add-comment add_comment uri https))
+        (edit_comment (edit-comment edit_comment uri https))
+        (error (error-page error))
+        (t (not-found))))
 
 ;; <baseurl>/admin/settings
 (hunchentoot:define-easy-handler (handle-settings :uri "/settings") (uri https)
@@ -192,7 +192,7 @@
   (unless (setf node-num (ignore-errors (parse-integer node-num)))
     (return-from render-web-node (not-found)))
   (with-settings (data-db)
-    (let* ((plist (make-node-plist node-num :data-db data-db))
+    (let* ((plist (make-node-plist node-num :unpublished-p t :data-db data-db))
            (post-template-name (get-post-template-name data-db)))
       (when plist
         (unless alias
@@ -273,19 +273,20 @@
               (setf (car prev.next) prev-nid
                     (read-node next-nid data-db) next)
               (render-node next :data-db data-db :site-db site-db))))))
-      (remf cat neighbors)
+      (remf neighbors cat)
+      (setf (getf node :cat-neighbors) neighbors)
       (let ((catnodes (delete nid (read-catnodes cat data-db) :key #'car)))
         (setf (read-catnodes cat data-db) catnodes)))
     (dolist (cat added)
       (let ((catnodes (delete nid (read-catnodes cat data-db) :key #'car)))
-        (setf catnodes (merge 'list `((,nid . ,created)) catnodes #'< :key #'cdr))
+        (setf catnodes (merge 'list `((,nid . ,created)) catnodes #'> :key #'cdr))
         (setf (read-catnodes cat data-db) catnodes)
         (loop for tail on catnodes
-           for prev-cell = nil then cell
+           for next-cell = nil then cell
            for cell = (car tail)
            when (eql nid (car cell)) do
-             (unless prev-cell (setf prev-cell (car (last tail))))
-             (let* ((next-cell (if (cdr tail) (cadr tail) (car catnodes)))
+             (unless next-cell (setf next-cell (car (last tail))))
+             (let* ((prev-cell (if (cdr tail) (cadr tail) (car catnodes)))
                     (prev-nid (car prev-cell))
                     (next-nid (car next-cell)))
                (setf (getf neighbors cat) (cons prev-nid next-nid))
@@ -412,15 +413,17 @@
      do
        (unless (or (eql prev nid) (eql next nid))
          (let* ((prev-node (read-node prev data-db))
-                (prev.next (getf cat (getf prev-node :cat-neighbors))))
+                (prev.next (getf (getf prev-node :cat-neighbors) cat)))
            (when (and prev.next (eql (cdr prev.next) nid))
-             (setf (cdr prev.next) next)
-             (setf (read-node prev data-db) prev-node)))
+             (setf (cdr prev.next) next
+                   (read-node prev data-db) prev-node)
+             (render-node prev-node :data-db data-db :site-db site-db)))
          (let* ((next-node (read-node next data-db))
-                (prev.next (getf cat (getf next-node :cat-neighbors))))
+                (prev.next (getf (getf next-node :cat-neighbors) cat)))
            (when (and prev.next (eql (car prev.next) nid))
-             (setf (car prev.next) prev)
-             (setf (read-node next data-db) next-node))))))
+             (setf (car prev.next) prev
+                   (read-node next data-db) next-node)
+             (render-node next-node :data-db data-db :site-db site-db))))))
 
 (defun save-updated-node (node &key
                           (data-db *data-db*)
@@ -487,8 +490,10 @@
                (let ((old-categories
                       (loop for (cat) on (getf node :cat-neighbors) by #'cddr
                          collect cat)))
-                 (unless (eql (length old-categories)
-                              (length (union categories old-categories)))
+                 (unless (and (eql (length old-categories)
+                                   (length categories))
+                              (eql (length old-categories)
+                                   (length (union categories old-categories))))
                    (setf node (update-node-categories
                                node categories old-categories
                                :data-db data-db

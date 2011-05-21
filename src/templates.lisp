@@ -370,7 +370,7 @@
 (defparameter *valid-post-format-values*
   (list $filtered-html-format $full-html-format $raw-html-format))
 
-(defun make-node-plist (node &key (comments-p t) (data-db *data-db*))
+(defun make-node-plist (node &key (comments-p t) unpublished-p (data-db *data-db*))
   (with-settings ()
     (let* ((plist (or (if (listp node) node (read-node node data-db))
                       (error "Node does not exist: ~s" node)))
@@ -379,7 +379,7 @@
            (uid (getf plist :uid))
            (format (getf plist :format))
            (user-plist (data-get $USERS uid :db data-db)))
-      (when (eql status 1)
+      (when (or unpublished-p (eql status 1))
         (unless (eql format $raw-html-format)
           (setf plist (do-drupal-formatting plist)))
         (setf (getf plist :post-date)
@@ -387,6 +387,8 @@
         (setf (getf plist :author) (getf user-plist :name))
         (setf (getf plist :category-info)
               (cat-neighbors-rendering-plist plist data-db))
+        (unless (eql status 1)
+          (setf (getf plist :unpublished) t))
         (when comments-p
           (let ((comment-plists (fetch-comments (getf plist :comments) data-db)))
             (setf (getf plist :comment-plists) comment-plists

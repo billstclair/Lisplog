@@ -1,5 +1,6 @@
 <!-- TMPL_LOOP posts -->           <h2 class="content-title">
-             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a><!-- TMPL_IF unpublished -->
+           <span class="unpublished">&nbsp;&nbsp;[UNPUBLISHED]</span><!-- /TMPL_IF -->
            </h2>
            <div class="info">
              Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --><!-- TMPL_IF category-info -->

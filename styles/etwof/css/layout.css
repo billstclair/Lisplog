@@ -110,6 +110,11 @@ blockquote {
    font-size: 0.9em;
 }
 
+.unpublished {
+   color: red;
+   font-weight: bold;
+}
+
 .content-item {
    margin-right: 5px;
    padding-left: 10px;
