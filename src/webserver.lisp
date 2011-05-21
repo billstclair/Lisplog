@@ -164,11 +164,13 @@
 (defconstant $no-post-permission 1)
 (defconstant $unknown-post-number 2)
 (defconstant $no-add-or-edit-permission 3)
+(defconstant $cant-delete 4)
 
 (defparameter *error-alist*
-  `((,$no-post-permission . "You don't have permission to submit posts")
+  `((,$no-post-permission . "You don't have permission to submit posts.")
     (,$unknown-post-number . "Unknown post number.")
-    (,$no-add-or-edit-permission . "You don't have permission to add or edit posts")))
+    (,$no-add-or-edit-permission . "You don't have permission to add or edit posts.")
+    (,$cant-delete . "Can't delete, no node-num.")))
 
 (defun error-url (uri https errnum)
   (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
@@ -533,6 +535,7 @@
                     promoted body input-format preview submit delete)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
+         (site-db (with-site-db (db) *site-db*))
          (uid (uid-of session))
          (user (read-user uid db))
          (author (getf user :name))
@@ -606,6 +609,7 @@
            (setf alias
                  (save-updated-node node
                                     :data-db db
+                                    :site-db site-db
                                     :alias alias
                                     :title title
                                     :uid uid
@@ -617,7 +621,16 @@
                                     :format format))
            (let ((base (compute-base-and-home uri https)))
              (hunchentoot:redirect (format nil "~a~a" base alias))))
-          (delete "Delete not done yet"))))
+          (delete
+           (when (blankp node-num)
+             (return-from submit-post
+               (redirect-to-error-page uri https $cant-delete)))
+           (setf (getf node :status) 0) ;causes it to disappear from year & month pages
+           (remove-node-from-site node :data-db db :site-db site-db)
+           (setf (read-node node-num db) nil)
+           (render-site-index :data-db db :site-db site-db)
+           (let ((base (compute-base-and-home uri https)))
+             (hunchentoot:redirect base))))))
 
 ;; <baseurl>/admin/?add_comment=<node-num>
 (defun add-comment (node-num uri https)
