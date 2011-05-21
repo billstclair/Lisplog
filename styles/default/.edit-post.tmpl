@@ -45,10 +45,13 @@ Preview:
     <input type="submit" name="submit" value="Submit"><!-- TMPL_IF node-num -->
     <input type="submit" name="delete" value="Delete"><!-- /TMPL_IF -->
     </p>
-    <p>
-    <span class="label">Categories:</span><br/>
-    <select name="categories" multiple="multiple" size="12"><!-- TMPL_LOOP category-options -->
-      <option value="<!-- TMPL_VAR value -->"<!-- TMPL_IF selected --> selected="selected"<!-- /TMPL_IF -->><!-- TMPL_VAR label --></option><!-- /TMPL_LOOP -->
-    </select></p>
+    <div class="category-selection">
+      <span class="label">Categories:</span><br/>
+      <table><!-- TMPL_LOOP category-rows -->
+        <tr><!-- TMPL_LOOP category-options -->
+          <td><input type="checkbox" name="categories" value="<!-- TMPL_VAR value -->"<!-- TMPL_IF selected --> checked="checked"<!-- /TMPL_IF -->> <!-- TMPL_VAR label --></td><!-- /TMPL_LOOP -->
+        </tr><!-- /TMPL_LOOP -->
+      </table>
+    </div>
   </form>
 </div>

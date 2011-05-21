@@ -246,6 +246,20 @@
        collect (list* :value tid :label name
                       (and selected '(:selected t))))))
 
+(defparameter *edit-post-category-options-per-row* 4)
+
+(defun node-to-edit-post-category-rows (node &optional (db *data-db*))
+  (flet ((ncdrs (list)
+           (nthcdr *edit-post-category-options-per-row* list)))
+    (let ((options (node-to-edit-post-category-options node db)))
+      (loop for tail on options by #'ncdrs
+         collect
+           (list
+            :category-options
+            (subseq
+             tail 0
+             (min (length tail) *edit-post-category-options-per-row*)))))))
+
 (defun update-node-categories (node categories old-categories &key
                                (data-db *data-db*)
                                (site-db *site-db*))
@@ -313,14 +327,14 @@
          (user (read-user uid db))
          (permissions (getf user :permissions))
          (author (getf user :name))
-         (node (read-node node-num db))
+         (node (and node-num (read-node node-num db)))
          (alias (car (getf node :aliases)))
          (title (getf node :title))
          (created (getf node :created))
-         (promote (getf node :promote))
-         (status (getf node :status))
+         (promote (if node (getf node :promote) 1))
+         (status (if node (getf node :status) 1))
          (body (getf node :body))
-         (format (getf node :format))
+         (format (if node (getf node :format) 1))
          plist)
     (when (and node-num (not node))
       (return-from edit-post
@@ -329,6 +343,11 @@
                 (memq :poster permissions))
       (return-from edit-post
         (redirect-to-error-page uri https $no-add-or-edit-permission)))
+    (unless node
+      (let ((category (with-settings (db)
+                        (get-setting :default-category))))
+        (when category
+          (setf (getf node :cat-neighbors) `(,category (0 . 0))))))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (setf plist (list* :node-num node-num
                         :home home
@@ -340,8 +359,7 @@
                         :published (eql status 1)
                         :promoted (eql promote 1)
                         :body (efh body)
-                        :category-options (node-to-edit-post-category-options
-                                           node db)
+                        :category-rows (node-to-edit-post-category-rows node db)
                         (node-format-to-edit-post-plist format))))
     (render-template ".edit-post.tmpl" plist :data-db db)))
 
@@ -456,7 +474,7 @@
       (when (blankp created)
         (setf created now))
       (cond (new-p
-             (setf node (list :aliases (list alias)
+             (setf node (list :aliases (list new-alias)
                               :nid (setf nid (allocate-nid data-db))
                               :title title
                               :uid uid
@@ -466,6 +484,7 @@
                               :promote promote
                               :body body
                               :format format)
+                   alias new-alias
                    new-alias-p t))
             (t (setf (getf node :changed) now)
                (let ((aliases (getf node :aliases)))
@@ -518,7 +537,7 @@
          (user (read-user uid db))
          (author (getf user :name))
          (permissions (getf user :permissions))
-         (node (read-node node-num db))
+         (node (and node-num (read-node node-num db)))
          (created (getf node :created))
          (post-time (and created (unix-time-to-rfc-1123-string created)))
          (promote (if (blankp promoted) 0 1))
@@ -558,7 +577,7 @@
                           :published (eql status 1)
                           :promoted (eql promote 1)
                           :body (efh body)
-                          :category-options (node-to-edit-post-category-options
+                          :category-rows (node-to-edit-post-category-rows
                                              categories db)
                           (node-format-to-edit-post-plist format)))
              (when preview
@@ -614,7 +633,7 @@
 
 ;; <baseurl>/admin/add_post
 (defun add-post (uri https)
-  (format nil "add post, uri: ~s, https: ~s" uri https))
+  (edit-post nil uri https))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
