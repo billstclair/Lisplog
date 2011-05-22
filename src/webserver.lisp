@@ -50,10 +50,10 @@
 (hunchentoot:define-easy-handler (handle-admin :uri "/")
     (node edit_post add_comment edit_comment uri https error)
   (setf (hunchentoot:content-type*) "text/html")
-  (cond ((login-screen uri https))
+  (cond (add_comment (add-comment add_comment uri https))
+        ((login-screen uri https))
         (node (render-web-node node uri https))
         (edit_post (edit-post edit_post uri https))
-        (add_comment (add-comment add_comment uri https))
         (edit_comment (edit-comment edit_comment uri https))
         (error (error-page error))
         (t (not-found))))
@@ -165,12 +165,14 @@
 (defconstant $unknown-post-number 2)
 (defconstant $no-add-or-edit-permission 3)
 (defconstant $cant-delete 4)
+(defconstant $no-edit-comment-permission 5)
 
 (defparameter *error-alist*
   `((,$no-post-permission . "You don't have permission to submit posts.")
     (,$unknown-post-number . "Unknown post number.")
     (,$no-add-or-edit-permission . "You don't have permission to add or edit posts.")
-    (,$cant-delete . "Can't delete, no node-num.")))
+    (,$cant-delete . "Can't delete, no node-num.")
+    (,$no-edit-comment-permission . "You may only edit your own comments.")))
 
 (defun error-url (uri https errnum)
   (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
@@ -352,17 +354,17 @@
           (setf (getf node :cat-neighbors) `(,category (0 . 0))))))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (setf plist (list* :node-num node-num
-                        :home home
-                        :base base
-                        :author (efh author)
-                        :post-time (unix-time-to-rfc-1123-string created)
-                        :title (efh title)
-                        :alias (efh alias)
-                        :published (eql status 1)
-                        :promoted (eql promote 1)
-                        :body (efh body)
-                        :category-rows (node-to-edit-post-category-rows node db)
-                        (node-format-to-edit-post-plist format))))
+                         :home home
+                         :base base
+                         :author (efh author)
+                         :post-time (unix-time-to-rfc-1123-string created)
+                         :title (efh title)
+                         :alias (efh alias)
+                         :published (eql status 1)
+                         :promoted (eql promote 1)
+                         :body (efh body)
+                         :category-rows (node-to-edit-post-category-rows node db)
+                         (node-format-to-edit-post-plist format))))
     (render-template ".edit-post.tmpl" plist :data-db db)))
 
 (defvar *node-save-lock*
@@ -638,7 +640,41 @@
 
 ;; <baseurl>/admin/?edit_comment=<comment-num>
 (defun edit-comment (comment-num uri https)
-  (format nil "edit comment, comment: ~s, uri: ~s, https: ~s" comment-num uri https))
+  (let* ((session hunchentoot:*session*)
+         (db (get-port-db))
+         (session-uid (uid-of session))
+         (user (read-user session-uid db))
+         (permissions (getf user :permissions))
+         (comment (and comment-num (read-comment comment-num db)))
+         (uid (getf comment :uid))
+         (title (getf comment :subject))
+         (body (getf comment :comment))
+         (created (or (getf comment :timestamp) (get-unix-time)))
+         (format (getf comment :format))
+         (author (getf comment :name))
+         (email (getf comment :mail))
+         (homepage (getf comment :homepage))
+         (status (getf comment :status)))
+    (unless (or (null comment-num)
+                (and session-uid
+                     user
+                     (or (memq :admin permissions)
+                         (eql uid session-uid))))
+      (return-from edit-comment
+        (redirect-to-error-page uri https $no-edit-comment-permission)))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (let ((plist (list* :comment-num comment-num
+                          :home home
+                          :base base
+                          :author (efh author)
+                          :email (efh email)
+                          :homepage (efh homepage)
+                          :post-time (unix-time-to-rfc-1123-string created)
+                          :title (efh title)
+                          :published (eql status 0)
+                          :body (efh body)
+                          (node-format-to-edit-post-plist format))))
+        (render-template ".edit-comment.tmpl" plist :data-db db)))))
 
 ;; <baseurl>/admin/settings
 (defun settings (uri https)
