@@ -12,33 +12,34 @@ Preview:
       <table>
         <tr>
           <td><span class="label">Name:</span></td>
-          <td><input type="text" name="author" size="50" value="<!-- TMPL_VAR author -->"/></td>
+          <td><!-- TMPL_IF edit-name-p --><input type="text" name="author" size="50" value="<!-- TMPL_VAR author -->"/><!-- TMPL_ELSE --><!-- TMPL_VAR author --><!-- /TMPL_IF --></td>
         </tr><tr>
           <td><span class="label">Email:</span></td>
-          <td><input type="text" name="email" size="50" value="<!-- TMPL_VAR email -->"/></td>
+          <td><!-- TMPL_IF edit-name-p --><input type="text" name="email" size="50" value="<!-- TMPL_VAR email -->"/><!-- TMPL_ELSE --><!-- TMPL_VAR email --><!-- /TMPL_IF --></td>
         </tr><tr>
           <td><span class="label">Homepage:</span></td>
-          <td><input type="text" name="homepage" value="<!-- TMPL_VAR homepage -->"/></td>
+          <td><input type="text" name="homepage" size="50" value="<!-- TMPL_VAR homepage -->"/></td>
         </tr><tr>
           <td><span class="label">Subject:</span></td>
           <td><input type="text" name="title" size="50" value="<!-- TMPL_VAR title -->"/></td>
-        </tr>
-        </tr><tr>
+        </tr><!-- TMPL_IF show-published-p -->
+        <tr>
           <td></td>
           <td><input type="checkbox" name="published"<!-- TMPL_IF published --> checked="checked"<!-- /TMPL_IF -->/> Published<br/>
-        </tr>
+        </tr><!-- /TMPL_ELSE --><!-- TMPL_IF published -->
+        <input type="hidden" name="published" value="<!-- TMPL_VAR published -->"><!-- /TMPL_IF --><!-- /TMPL_IF -->
       </table>
     </fieldset>
     <br/>
     <span class="label">Comment:</span> <span class="form-required">*</span><br/>
     <textarea wrap="virtual" cols="80" rows="20" name="body"><!-- TMPL_VAR body --></textarea>
-    <br/>
+    <br/><!-- TMPL_IF show-input-format -->
     <fieldset>
       <legend>Input format</legend>
       <input type="radio" name="input-format" value="filtered-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Filtered HTML<br/>
       <input type="radio" name="input-format" value="full-html"<!-- TMPL_IF full-html --> checked="checked"<!-- /TMPL_IF -->/> Full HTML<br/>
       <input type="radio" name="input-format" value="raw-html"<!-- TMPL_IF raw-html --> checked="checked"<!-- /TMPL_IF -->/> Raw HTML<br/>
-    </fieldset>
+    </fieldset><!-- /TMPL_IF -->
     <p>
     <input type="submit" name="preview" value="Preview">
     <input type="submit" name="submit" value="Submit"><!-- TMPL_IF node-num -->

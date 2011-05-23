@@ -84,6 +84,22 @@
                :submit submit
                :delete delete))
 
+;; <baseurl>/admin/submit_comment
+(hunchentoot:define-easy-handler (handle-submit-comment :uri "/submit_comment")
+    (uri https comment-num author email homepage title published body
+         input-format preview submit delete)
+  (submit-post uri https
+               :node-num node-num
+               :title title
+               :alias alias
+               :published published
+               :promoted promoted
+               :body body
+               :input-format input-format
+               :preview preview
+               :submit submit
+               :delete delete))
+
 ;; <baseurl>/admin/login
 (hunchentoot:define-easy-handler (handle-login :uri "/login")
     (query-string username password uri https)
@@ -645,6 +661,7 @@
          (session-uid (uid-of session))
          (user (read-user session-uid db))
          (permissions (getf user :permissions))
+         (admin-p (memq :admin permissions))
          (comment (and comment-num (read-comment comment-num db)))
          (uid (getf comment :uid))
          (title (getf comment :subject))
@@ -656,10 +673,8 @@
          (homepage (getf comment :homepage))
          (status (getf comment :status)))
     (unless (or (null comment-num)
-                (and session-uid
-                     user
-                     (or (memq :admin permissions)
-                         (eql uid session-uid))))
+                (and session-uid user
+                     (or admin-p (eql uid session-uid))))
       (return-from edit-comment
         (redirect-to-error-page uri https $no-edit-comment-permission)))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
@@ -673,6 +688,9 @@
                           :title (efh title)
                           :published (eql status 0)
                           :body (efh body)
+                          :edit-name-p (not uid)
+                          :show-published-p admin-p
+                          :show-input-format admin-p
                           (node-format-to-edit-post-plist format))))
         (render-template ".edit-comment.tmpl" plist :data-db db)))))
 
