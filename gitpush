@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# git remote add ll $HUBLL:/usr/local/www/lisplog/lisplog.git
+
+git push origin master
+git push ll master
