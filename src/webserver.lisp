@@ -86,19 +86,22 @@
 
 ;; <baseurl>/admin/submit_comment
 (hunchentoot:define-easy-handler (handle-submit-comment :uri "/submit_comment")
-    (uri https comment-num author email homepage title published body
+    (uri https comment-num node-num author email homepage title published body
          input-format preview submit delete)
-  (submit-post uri https
-               :node-num node-num
-               :title title
-               :alias alias
-               :published published
-               :promoted promoted
-               :body body
-               :input-format input-format
-               :preview preview
-               :submit submit
-               :delete delete))
+  (submit-comment
+   uri https
+   :comment-num comment-num
+   :node-num node-num
+   :author author
+   :email email
+   :homepage homepage
+   :title title
+   :published published
+   :body body
+   :input-format input-format
+   :preview preview
+   :submit submit
+   :delete delete))
 
 ;; <baseurl>/admin/login
 (hunchentoot:define-easy-handler (handle-login :uri "/login")
@@ -182,13 +185,17 @@
 (defconstant $no-add-or-edit-permission 3)
 (defconstant $cant-delete 4)
 (defconstant $no-edit-comment-permission 5)
+(defconstant $unknown-comment-number 6)
+(defconstant $name-may-not-be-blank 7)
 
 (defparameter *error-alist*
   `((,$no-post-permission . "You don't have permission to submit posts.")
     (,$unknown-post-number . "Unknown post number.")
     (,$no-add-or-edit-permission . "You don't have permission to add or edit posts.")
     (,$cant-delete . "Can't delete, no node-num.")
-    (,$no-edit-comment-permission . "You may only edit your own comments.")))
+    (,$no-edit-comment-permission . "You may only edit your own comments.")
+    (,$unknown-comment-number . "Unknown comment number.")
+    (,$name-may-not-be-blank . "Name may not be blank.")))
 
 (defun error-url (uri https errnum)
   (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
@@ -655,7 +662,7 @@
   (format nil "add comment, node: ~s, uri: ~s, https: ~s" node-num uri https))
 
 ;; <baseurl>/admin/?edit_comment=<comment-num>
-(defun edit-comment (comment-num uri https)
+(defun edit-comment (comment-num uri https &key node-num)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
          (session-uid (uid-of session))
@@ -672,6 +679,10 @@
          (email (getf comment :mail))
          (homepage (getf comment :homepage))
          (status (getf comment :status)))
+    (unless node-num
+      (setf node-num (getf comment :nid)))
+    (when (and (blankp author) user)
+      (setf author (getf user :name)))
     (unless (or (null comment-num)
                 (and session-uid user
                      (or admin-p (eql uid session-uid))))
@@ -679,6 +690,7 @@
         (redirect-to-error-page uri https $no-edit-comment-permission)))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (let ((plist (list* :comment-num comment-num
+                          :node-num node-num
                           :home home
                           :base base
                           :author (efh author)
@@ -693,6 +705,116 @@
                           :show-input-format admin-p
                           (node-format-to-edit-post-plist format))))
         (render-template ".edit-comment.tmpl" plist :data-db db)))))
+
+(defun submit-comment (uri https &key comment-num node-num author email homepage
+                       title published body input-format preview submit delete)
+  (let* ((session hunchentoot:*session*)
+         (db (get-port-db))
+         (site-db (with-site-db (db) *site-db*))
+         (session-uid (uid-of session))
+         (user (read-user session-uid db))
+         (permissions (getf user :permissions))
+         (admin-p (memq :admin permissions))
+         (comment (and comment-num (read-comment comment-num db)))
+         (uid (getf comment :uid))
+         (created (getf comment :timestamp))
+         (post-time (and created (unix-time-to-rfc-1123-string created)))
+         (status (if session-uid
+                     (if (blankp published) 1 0)
+                     1))                ;not published for unlogged-in commentor
+         (format (if admin-p
+                     (node-format-name-to-number input-format)
+                     1))                ;filtered-html for unlogged-in commentor
+         (errmsg nil)
+         plist)
+    (cond ((blankp body)
+           (setf errmsg "Body may not be blank")
+           (when comment
+             (setf body (getf comment :body)))))
+    (when (blankp title)
+      (let* ((body-len (length body))
+             (pos (if (<= body-len 20)
+                      body-len
+                      (or (position #\space body :start 20) 20))))
+        (setf title (subseq body 0 pos))))
+    (when (blankp author)
+      (setf author (getf comment :name))
+      (when (blankp author)
+        (return-from submit-comment
+          (redirect-to-error-page uri https $name-may-not-be-blank))))
+    (when (blankp email)
+      (setf email (getf comment :mail)))
+    (when (blankp homepage)
+      (setf homepage (getf comment :homepage))
+      (when (blankp homepage)
+        (setf homepage nil)))
+    (unless (or (null comment-num)
+                (and session-uid user
+                     (or admin-p (eql uid session-uid))))
+      (return-from submit-comment
+        (redirect-to-error-page uri https $no-edit-comment-permission)))
+    (when (and comment-num (not comment))
+      (return-from submit-comment
+        (redirect-to-error-page uri https $unknown-comment-number)))
+    (cond ((or preview errmsg)
+           (multiple-value-bind (base home) (compute-base-and-home uri https)
+             (setf plist
+                   (list* :comment-num comment-num
+                          :node-num node-num
+                          :home home
+                          :base base
+                          :errmsg (efh errmsg)
+                          :author (efh author)
+                          :post-time post-time
+                          :title (efh title)
+                          :published (eql status 0)
+                          :body (efh body)
+                          :edit-name-p (not uid)
+                          :show-published-p admin-p
+                          :show-input-format admin-p
+                          (node-format-to-edit-post-plist format)))
+             (when preview
+               (let* ((template-name (get-comment-template-name db))
+                      (template (get-style-file template-name db))
+                      (node (and node-num (read-node node-num db)))
+                      (alias (car (getf node :aliases)))
+                      (comment-plist
+                       (list :cid comment-num
+                             :subject title
+                             :name author
+                             :homepage homepage
+                             :post-date post-time
+                             :comment (cond ((eql format $raw-html-format) body)
+                                            (t (drupal-format body)))
+                             :home home
+                             :permalink (and alias (efh alias)))))
+                 (setf (getf plist :preview)
+                       (fill-and-print-to-string template comment-plist)))))
+           (render-template ".edit-comment.tmpl" plist :data-db db))
+          (submit
+           (setf alias
+                 (save-updated-node node
+                                    :data-db db
+                                    :site-db site-db
+                                    :alias alias
+                                    :title title
+                                    :uid uid
+                                    :created created
+                                    :status status
+                                    :body body
+                                    :format format))
+           (let ((base (compute-base-and-home uri https)))
+             (hunchentoot:redirect (format nil "~a~a" base alias))))
+          (delete
+           (when (blankp node-num)
+             (return-from submit-comment
+               (redirect-to-error-page uri https $cant-delete)))
+           (setf (getf node :status) 0) ;causes it to disappear from year & month pages
+           (remove-node-from-site node :data-db db :site-db site-db)
+           (setf (read-node node-num db) nil)
+           (render-site-index :data-db db :site-db site-db)
+           (let ((base (compute-base-and-home uri https)))
+             (hunchentoot:redirect base))))))
 
 ;; <baseurl>/admin/settings
 (defun settings (uri https)

@@ -1,13 +1,14 @@
 <h2 class="content-title"><!-- TMPL_IF comment-num -->Edit Comment #<!-- TMPL_VAR comment-num --><!-- TMPL_ELSE -->Add Comment<!-- /TMPL_IF --></h2>
 <br/><!-- TMPL_IF preview -->
 Preview:
-<div class="preview">
+<div class="comment-preview">
   <!-- TMPL_VAR preview -->
 </div><!-- /TMPL_IF -->
 <div class="edit-post"><!-- TMPL_IF errmsg -->
   <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF -->
   <form action="admin/submit_comment" method="post"><!-- TMPL_IF comment-num -->
-    <input type="hidden" name="comment-num" value="<!-- TMPL_VAR comment-num -->"/><!-- /TMPL_IF -->
+    <input type="hidden" name="comment-num" value="<!-- TMPL_VAR comment-num -->"/><!-- /TMPL_IF --><!-- TMPL_IF node-num -->
+    <input type="hidden" name="node-num" value="<!-- TMPL_VAR node-num -->"/><!-- /TMPL_IF -->
     <fieldset>
       <table>
         <tr>

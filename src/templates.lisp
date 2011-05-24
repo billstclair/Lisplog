@@ -32,6 +32,7 @@
 
 (defparameter *style-index-file* ".index.tmpl")
 (defparameter *style-post-file* ".post.tmpl")
+(defparameter *style-comment-file* ".comment.tmpl")
 
 ;;;
 ;;; Accessing styles and site files
@@ -293,6 +294,10 @@
   (loop for block-num in (getf settings :block-nums)
      collect (data-get $BLOCKS block-num)))
 
+(defconstant $filtered-html-format 1)
+(defconstant $full-html-format 3)
+(defconstant $raw-html-format 5)
+
 (defun fetch-comments (numbers &optional (*data-db* *data-db*))
   (unless (listp numbers)
     (let ((plist (data-get $NODES numbers)))
@@ -301,10 +306,13 @@
   (loop for num in numbers
      for plist = (data-get $COMMENTS num)
      for text = (getf plist :comment)
+     for format = (getf plist :format)
      for unapproved-p = (eql 1 (getf plist :status))
      unless unapproved-p
      do
-       (setf (getf plist :comment) (drupal-format text)
+       (unless (eql format $raw-html-format)
+         (setf text (drupal-format text)))
+       (setf (getf plist :comment) text
              (getf plist :post-date)
              (unix-time-to-rfc-1123-string (getf plist :timestamp)))
        (when (blankp (getf plist :homepage))
@@ -363,10 +371,6 @@
          :prev-url ,prev-url
          :next-url ,next-url)))
 
-(defconstant $filtered-html-format 1)
-(defconstant $full-html-format 3)
-(defconstant $raw-html-format 5)
-
 (defparameter *valid-post-format-values*
   (list $filtered-html-format $full-html-format $raw-html-format))
 
@@ -399,6 +403,10 @@
 (defun get-post-template-name (&optional (db *data-db*))
   (with-settings (db)
     (or (get-setting :post-template) *style-post-file*)))
+
+(defun get-comment-template-name (&optional (db *data-db*))
+  (with-settings (db)
+    (or (get-setting :comment-template) *style-comment-file*)))
 
 (defun render-node (node &key (data-db *data-db*) (site-db *site-db*))
   (with-settings ()
