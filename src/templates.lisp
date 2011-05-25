@@ -118,6 +118,9 @@
 (defun (setf read-comment) (plist comment &optional (db *data-db*))
   (setf (sexp-get db $COMMENTS comment) plist))
 
+(defun probe-comment (cid &optional (db *data-db*))
+  (sexp-probe db $COMMENTS cid))
+
 (defun read-user (user-num &optional (db *data-db*))
   (sexp-get db $USERS user-num))
 
@@ -149,6 +152,30 @@
        (incf nid))
     (setf (read-nid db) nid)))
 
+(defun read-cid (&optional (db *data-db*))
+  (let ((cid-string (fsdb:db-get db $COUNTERS $CID))
+        cid)
+    (cond (cid-string (setf cid (parse-integer cid-string)))
+          (t
+           (let ((max-cid 0))
+             (do-comments (comment db)
+               (let ((cid (getf comment :cid)))
+                 (when (and cid (> cid max-cid))
+                   (setf max-cid cid))))
+             (setf cid max-cid
+                   (read-cid db) cid))))
+    cid))
+
+(defun (setf read-cid) (cid &optional (db *data-db*))
+  (setf (fsdb:db-get db $COUNTERS $CID) (princ-to-string cid))
+  cid)
+
+(defun allocate-cid (&optional (db *data-db*))
+  (let ((cid (read-cid db)))
+    (loop
+       (unless (probe-comment cid db) (return))
+       (incf cid))
+    (setf (read-cid db) cid)))
 
 (defun user-permission-p (user-num permission &optional (db *data-db*))
   (not (null (memq permission (getf (read-user user-num db) :permissions)))))

@@ -27,8 +27,8 @@ Preview:
         <tr>
           <td></td>
           <td><input type="checkbox" name="published"<!-- TMPL_IF published --> checked="checked"<!-- /TMPL_IF -->/> Published<br/>
-        </tr><!-- /TMPL_ELSE --><!-- TMPL_IF published -->
-        <input type="hidden" name="published" value="<!-- TMPL_VAR published -->"><!-- /TMPL_IF --><!-- /TMPL_IF -->
+        </tr><!-- TMPL_ELSE --><!-- TMPL_IF published -->
+        <input type="hidden" name="published" value="on"><!-- /TMPL_IF --><!-- /TMPL_IF -->
       </table>
     </fieldset>
     <br/>

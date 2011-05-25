@@ -706,6 +706,57 @@
                           (node-format-to-edit-post-plist format))))
         (render-template ".edit-comment.tmpl" plist :data-db db)))))
 
+(defun save-updated-comment (comment &key
+                             (data-db *data-db*)
+                             (site-db *site-db*)
+                             nid
+                             uid
+                             subject
+                             body
+                             (status 0)
+                             (format $filtered-html-format)
+                             name
+                             mail
+                             homepage)
+  (check-type subject string)
+  (check-type uid (or null integer))
+  (check-type body string)
+  (check-type status integer)
+  (assert (member format *valid-post-format-values*))
+  (assert (not (or (blankp subject) (blankp comment))))
+  (unless nid (setf nid (getf comment :nid)))
+  (with-node-save-lock
+    (let ((new-p (null comment))
+          (timestamp (or (getf comment :timestamp) (get-unix-time)))
+          (node (read-node nid data-db))
+          (cid (getf comment :cid)))
+      (assert node)
+      (cond (new-p
+             (setf comment (list :cid (setf cid (allocate-cid data-db))
+                                 :nid nid
+                                 :uid uid
+                                 :subject subject
+                                 :comment body
+                                 :timestamp timestamp
+                                 :status status
+                                 :format format
+                                 :name name
+                                 :mail mail
+                                 :homepage homepage))
+             (push cid (getf node :comments))
+             (setf (read-node nid data-db) node))
+            (t (setf (getf comment :subject) subject
+                     (getf comment :status) status
+                     (getf comment :comment) body
+                     (getf comment :format) format
+                     (getf comment :homepage) homepage)))
+      (setf (read-comment cid data-db) comment)
+      (render-node node :data-db data-db :site-db site-db)
+      ;; Don't always have to do this, but figuring out when
+      ;; is harder than just doing it.
+      (render-site-index :data-db data-db :site-db site-db)
+      (values cid (car (getf node :aliases))))))
+
 (defun submit-comment (uri https &key comment-num node-num author email homepage
                        title published body input-format preview submit delete)
   (let* ((session hunchentoot:*session*)
@@ -730,7 +781,7 @@
     (cond ((blankp body)
            (setf errmsg "Body may not be blank")
            (when comment
-             (setf body (getf comment :body)))))
+             (setf body (getf comment :comment)))))
     (when (blankp title)
       (let* ((body-len (length body))
              (pos (if (<= body-len 20)
@@ -765,6 +816,8 @@
                           :base base
                           :errmsg (efh errmsg)
                           :author (efh author)
+                          :email (efh email)
+                          :homepage (efh homepage)
                           :post-time post-time
                           :title (efh title)
                           :published (eql status 0)
@@ -792,26 +845,31 @@
                        (fill-and-print-to-string template comment-plist)))))
            (render-template ".edit-comment.tmpl" plist :data-db db))
           (submit
-           (setf alias
-                 (save-updated-node node
-                                    :data-db db
-                                    :site-db site-db
-                                    :alias alias
-                                    :title title
-                                    :uid uid
-                                    :created created
-                                    :status status
-                                    :body body
-                                    :format format))
-           (let ((base (compute-base-and-home uri https)))
-             (hunchentoot:redirect (format nil "~a~a" base alias))))
+           (multiple-value-bind (cid alias)
+               (save-updated-comment comment
+                                     :data-db db
+                                     :site-db site-db
+                                     :nid node-num
+                                     :uid uid
+                                     :subject title
+                                     :body body
+                                     :status status
+                                     :format format
+                                     :name author
+                                     :mail email
+                                     :homepage homepage)
+             (let ((base (compute-base-and-home uri https)))
+               (hunchentoot:redirect (format nil "~a~a#comment-~a" base alias cid)))))
           (delete
-           (when (blankp node-num)
+           (when (blankp comment-num)
              (return-from submit-comment
                (redirect-to-error-page uri https $cant-delete)))
-           (setf (getf node :status) 0) ;causes it to disappear from year & month pages
-           (remove-node-from-site node :data-db db :site-db site-db)
-           (setf (read-node node-num db) nil)
+           (let* ((nid (getf comment :nid))
+                  (node (and nid (read-node nid db))))
+             (setf (getf node :comments)
+                   (delete comment-num (getf node :comments)))
+             (render-node node :data-db db :site-db site-db))
+           (setf (read-comment comment-num db) nil)
            (render-site-index :data-db db :site-db site-db)
            (let ((base (compute-base-and-home uri https)))
              (hunchentoot:redirect base))))))
