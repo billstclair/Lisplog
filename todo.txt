@@ -11,18 +11,17 @@ Dynamic server
 
 do-drupal-formatting needs to support filtered-html and auto-links.
 
-Edit/Create comments
-Locking
-ctrl-shift-Q javascript to enter blockquote
-ctrl-shift-T javascript to enter TMPL_VAR
-  Disable TMPL_xxx comments for non-posters.
-  Disable most HTML for non-posters
-
+Create comments
+Test delete comments
 CAPTCHA
 Comment moderation.
-Apache redirect for admin/
+
+RSS generation for site
+RSS parsing and display (news feed)
 
 Go LIVE!
+
+ctrl-shift-Q javascript to enter blockquote
 
 Re-render subsets of the site or whole site.
 Dynamic serving. Is it faster? Is it faster if I preload the data?

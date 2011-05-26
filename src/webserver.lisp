@@ -88,6 +88,8 @@
 (hunchentoot:define-easy-handler (handle-submit-comment :uri "/submit_comment")
     (uri https comment-num node-num author email homepage title published body
          input-format preview submit delete)
+  (setf comment-num (ignore-errors (parse-integer comment-num))
+        node-num (ignore-errors (parse-integer node-num)))
   (submit-comment
    uri https
    :comment-num comment-num
@@ -659,7 +661,7 @@
 
 ;; <baseurl>/admin/?add_comment=<node-num>
 (defun add-comment (node-num uri https)
-  (format nil "add comment, node: ~s, uri: ~s, https: ~s" node-num uri https))
+  (edit-comment nil uri https :node-num node-num))
 
 ;; <baseurl>/admin/?edit_comment=<comment-num>
 (defun edit-comment (comment-num uri https &key node-num)
@@ -683,6 +685,10 @@
       (setf node-num (getf comment :nid)))
     (when (and (blankp author) user)
       (setf author (getf user :name)))
+    (when (and user (not comment-num))
+      (setf email (getf user :mail)
+            status 0
+            format 1))      
     (unless (or (null comment-num)
                 (and session-uid user
                      (or admin-p (eql uid session-uid))))
@@ -723,7 +729,7 @@
   (check-type body string)
   (check-type status integer)
   (assert (member format *valid-post-format-values*))
-  (assert (not (or (blankp subject) (blankp comment))))
+  (assert (and (not (blankp subject)) (not (blankp body))))
   (unless nid (setf nid (getf comment :nid)))
   (with-node-save-lock
     (let ((new-p (null comment))
@@ -866,13 +872,17 @@
                (redirect-to-error-page uri https $cant-delete)))
            (let* ((nid (getf comment :nid))
                   (node (and nid (read-node nid db))))
-             (setf (getf node :comments)
-                   (delete comment-num (getf node :comments)))
-             (render-node node :data-db db :site-db site-db))
-           (setf (read-comment comment-num db) nil)
-           (render-site-index :data-db db :site-db site-db)
-           (let ((base (compute-base-and-home uri https)))
-             (hunchentoot:redirect base))))))
+             (setf (read-comment comment-num db) nil)
+             (when node
+               (setf (getf node :comments) (delete comment-num (getf node :comments))
+                     (read-node nid db) node)
+               (render-node node :data-db db :site-db site-db))
+             (render-site-index :data-db db :site-db site-db)
+             (let ((base (compute-base-and-home uri https))
+                   (alias (or (car (getf node :aliases)) "")))
+               (unless (blankp alias)
+                 (setf alias (strcat alias "#comments")))
+               (hunchentoot:redirect (format nil "~a~a" base alias))))))))
 
 ;; <baseurl>/admin/settings
 (defun settings (uri https)
