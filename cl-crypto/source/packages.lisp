@@ -30,6 +30,7 @@
    #:aes-decrypt-to-string
    #:aes-string-encryption-test
    ;; random.lisp
+   #:with-random-byte-stream
    #:get-random-bits
    #:random-integer
    #:get-ranged-random-num

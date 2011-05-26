@@ -34,6 +34,7 @@
      (:file "history")
      (:file "csv")
      (:file "sessions")
+     (:file "captcha")
      (:file "webserver")
      ))))
 
