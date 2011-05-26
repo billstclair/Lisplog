@@ -19,6 +19,7 @@
 (defun (setf read-captcha-state) (state &optional (db *data-db*))
   (setf (sexp-get db $CAPTCHA $CAPTCHA :subdirs-p nil) state))
 
+;; New random seed every 10 minutes
 (defparameter *captcha-valid-time* (* 60 10))
 
 (defun make-captcha-seed ()
@@ -72,7 +73,7 @@
              (res-hash (cl-crypto:sha1 (format nil "~d" res)))
              (res-int (parse-hex res-hash))
              (hidden-int (logxor seed-int res-int))
-             (hidden-hash (format nil "~x" hidden-int)))
+             (hidden-hash (cl-crypto:sha1 (format nil "~x" hidden-int))))
         (%make-captcha
          :query-explanation "Solve the simple arithmetic problem."
          :query-html query
@@ -88,11 +89,12 @@
          (seed (and timestamp (get-captcha-seed timestamp)))
          (seed-int (and seed (parse-hex seed)))
          (hidden-hash (and pos (subseq hidden-field-value (1+ pos))))
-         (hidden-int (ignore-errors (parse-hex hidden-hash)))
          (res-hash (cl-crypto:sha1 res))
-         (res-int (parse-hex res-hash)))
-    (cond ((and seed-int hidden-int)
-           (eql hidden-int (logxor seed-int res-int)))
+         (res-int (parse-hex res-hash))
+         (hidden-int (logxor seed-int res-int)))
+    (cond ((and seed-int hidden-hash)
+           (equal hidden-hash
+                  (cl-crypto:sha1 (format nil "~x" hidden-int))))
           (t (values nil :timeout)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
