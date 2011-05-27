@@ -1,4 +1,4 @@
-; -*- mode: lisp -*-
+                                        ; -*- mode: lisp -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -21,9 +21,9 @@
         (error "Hunchentoot already started"))
       (prog1
           (setf hunchentoot:*show-lisp-errors-p* t)
-          (setf (get-port-acceptor port)
-                (hunchentoot:start
-                 (make-instance 'lisplog-acceptor :port port)))
+        (setf (get-port-acceptor port)
+              (hunchentoot:start
+               (make-instance 'lisplog-acceptor :port port)))
         (setf (get-port-db port) db)))))
 
 (defun stop (&key port (db *data-db*))
@@ -132,7 +132,7 @@
             (setf (getf plist :home) home
                   (getf plist :base) base))
           (render-template ".login.tmpl" plist :data-db db))))))
-          
+
 (defun login-redirect-uri (query-string)
   (let* ((params (hunchentoot::form-url-encoded-list-to-alist
                   (cl-ppcre::split "&" query-string)))
@@ -310,12 +310,12 @@
               (setf (cdr prev.next) next-nid
                     (read-node prev-nid data-db) prev)
               (render-node prev :data-db data-db :site-db site-db))
-          (let* ((next (read-node next-nid data-db))
-                 (prev.next (getf (getf next :cat-neighbors) cat)))
-            (when (consp prev.next)
-              (setf (car prev.next) prev-nid
-                    (read-node next-nid data-db) next)
-              (render-node next :data-db data-db :site-db site-db))))))
+            (let* ((next (read-node next-nid data-db))
+                   (prev.next (getf (getf next :cat-neighbors) cat)))
+              (when (consp prev.next)
+                (setf (car prev.next) prev-nid
+                      (read-node next-nid data-db) next)
+                (render-node next :data-db data-db :site-db site-db))))))
       (remf neighbors cat)
       (setf (getf node :cat-neighbors) neighbors)
       (let ((catnodes (delete nid (read-catnodes cat data-db) :key #'car)))
@@ -334,7 +334,7 @@
                     (next-nid (car next-cell)))
                (setf (getf neighbors cat) (cons prev-nid next-nid))
                (let* ((prev (read-node prev-nid data-db))
-                 (prev.next (getf (getf prev :cat-neighbors) cat)))
+                      (prev.next (getf (getf prev :cat-neighbors) cat)))
                  (when (consp prev.next)
                    (setf (cdr prev.next) nid
                          (read-node prev-nid data-db) prev)
@@ -608,7 +608,7 @@
                           :promoted (eql promote 1)
                           :body (efh body)
                           :category-rows (node-to-edit-post-category-rows
-                                             categories db)
+                                          categories db)
                           (node-format-to-edit-post-plist format)))
              (when preview
                (let* ((template-name (get-post-template-name db))
@@ -886,7 +886,15 @@
 
 ;; <baseurl>/admin/settings
 (defun settings (uri https)
-  (format nil "settings, uri: ~s, https: ~s" uri https))
+  (let ((db (get-port-db))
+        plist)
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (cond ((hunchentoot:parameter "logout")
+             (end-session)
+             (return-from settings (hunchentoot:redirect base))))
+      (setf plist (list :home home
+                        :base base))
+      (render-template ".settings.tmpl" plist :data-db db))))
 
 ;; <baseurl>/admin/add_post
 (defun add-post (uri https)

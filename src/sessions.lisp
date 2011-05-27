@@ -157,6 +157,13 @@
         (setf (hunchentoot:session hunchentoot:*request*) session
               hunchentoot:*session* session))))
 
+(defun end-session ()
+  (hunchentoot:set-cookie
+   (hunchentoot:session-cookie-name hunchentoot:*acceptor*)
+   :value ""
+   :path "/"
+   :expires 0))
+
 (defmethod hunchentoot:session-cookie-value ((session session))
   (session-id-of session))
 

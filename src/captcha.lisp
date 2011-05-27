@@ -11,7 +11,7 @@
   query-explanation
   query-html
   response-size
-  hidden-field-value)
+  hidden-value)
 
 (defun read-captcha-state (&optional (db *data-db*))
   (sexp-get db $CAPTCHA $CAPTCHA :subdirs-p nil))
@@ -23,7 +23,7 @@
 (defparameter *captcha-valid-time* (* 60 10))
 
 (defun make-captcha-seed ()
-  (format nil "~x" (cl-crypto:get-random-bits 128)))
+  (format nil "~x" (cl-crypto:get-random-bits 160)))
 
 (defun parse-hex (string)
   (parse-integer string :radix 16))
@@ -78,23 +78,23 @@
          :query-explanation "Solve the simple arithmetic problem."
          :query-html query
          :response-size 4
-         :hidden-field-value (format nil "~a ~a" time hidden-hash))))))
+         :hidden-value (format nil "~a+~a" time hidden-hash))))))
 
-(defun validate-captcha (res hidden-field-value)
+(defun validate-captcha (res hidden-value)
   (check-type res string)
-  (check-type hidden-field-value string)
-  (let* ((pos (position #\space hidden-field-value))
-         (time-str (and pos (subseq hidden-field-value 0 pos)))
+  (check-type hidden-value string)
+  (let* ((pos (position #\+ hidden-value))
+         (time-str (and pos (subseq hidden-value 0 pos)))
          (timestamp (ignore-errors (parse-integer time-str)))
          (seed (and timestamp (get-captcha-seed timestamp)))
          (seed-int (and seed (parse-hex seed)))
-         (hidden-hash (and pos (subseq hidden-field-value (1+ pos))))
+         (hidden-hash (and pos (subseq hidden-value (1+ pos))))
          (res-hash (cl-crypto:sha1 res))
-         (res-int (parse-hex res-hash))
-         (hidden-int (logxor seed-int res-int)))
+         (res-int (parse-hex res-hash)))
     (cond ((and seed-int hidden-hash)
-           (equal hidden-hash
-                  (cl-crypto:sha1 (format nil "~x" hidden-int))))
+           (let ((hidden-int (logxor seed-int res-int)))
+             (equal hidden-hash
+                    (cl-crypto:sha1 (format nil "~x" hidden-int)))))
           (t (values nil :timeout)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
