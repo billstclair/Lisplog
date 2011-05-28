@@ -13,6 +13,9 @@
        (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
          ,@body))))
 
+(setf hunchentoot:*hunchentoot-default-external-format*
+      (flexi-streams:make-external-format :utf8 :eol-style :lf))
+
 (defun start (&optional (db *data-db*))
   (when (stringp db) (setf db (fsdb:make-fsdb db)))
   (with-site-db (db)
@@ -115,6 +118,15 @@
     (query-string username password uri https)
   (login query-string username password uri https))
 
+(hunchentoot:define-easy-handler (handle-moderate :uri "/moderate") (uri https)
+  (or (login-screen uri https)
+      (moderate uri https)))
+
+(hunchentoot:define-easy-handler (handle-submit-moderate :uri "/submit_moderate")
+    (uri https submit)
+  (or (login-screen uri https)
+      (submit-moderate uri https :submit submit)))
+
 ;;;
 ;;; Login and registration
 ;;;
@@ -194,6 +206,7 @@
 (defconstant $no-edit-comment-permission 5)
 (defconstant $unknown-comment-number 6)
 (defconstant $name-may-not-be-blank 7)
+(defconstant $no-moderation-permission 8)
 
 (defparameter *error-alist*
   `((,$no-post-permission . "You don't have permission to submit posts.")
@@ -202,7 +215,8 @@
     (,$cant-delete . "Can't delete, no node-num.")
     (,$no-edit-comment-permission . "You may only edit your own comments.")
     (,$unknown-comment-number . "Unknown comment number.")
-    (,$name-may-not-be-blank . "Name may not be blank.")))
+    (,$name-may-not-be-blank . "Name may not be blank.")
+    (,$no-moderation-permission . "You do not have permission to do moderation")))
 
 (defun error-url (uri https errnum)
   (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
@@ -352,6 +366,10 @@
                    (render-node next :data-db data-db :site-db site-db)))))))
     (setf (getf node :cat-neighbors) neighbors)
     node))
+
+;; <baseurl>/admin/add_post
+(defun add-post (uri https)
+  (edit-post nil uri https))
 
 ;; <baseurl>/admin/?edit_post=<node-num>
 (defun edit-post (node-num uri https)
@@ -677,6 +695,10 @@
          (permissions (getf user :permissions))
          (admin-p (memq :admin permissions))
          (comment (and comment-num (read-comment comment-num db)))
+         (node (and (or node-num (setf node-num (getf comment :nid)))
+                    (read-node node-num db)))
+         (post-alias (efh (car (getf node :aliases))))
+         (post-title (efh (getf node :title)))
          (uid (getf comment :uid))
          (title (getf comment :subject))
          (body (getf comment :comment))
@@ -687,8 +709,6 @@
          (homepage (getf comment :homepage))
          (status (getf comment :status))
          captcha-explanation captcha-query captcha-response-size captcha-hidden)
-    (unless node-num
-      (setf node-num (getf comment :nid)))
     (when (and (blankp author) user)
       (setf author (getf user :name)))
     (when (and user (not comment-num))
@@ -709,7 +729,9 @@
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (let ((plist (list* :comment-num comment-num
                           :node-num node-num
-                          :moderated-p (not user)
+                          :post-alias post-alias
+                          :post-title post-title
+                          :moderated-p (null user)
                           :home home
                           :base base
                           :author (efh author)
@@ -774,6 +796,8 @@
                      (getf comment :format) format
                      (getf comment :homepage) homepage)))
       (setf (read-comment cid data-db) comment)
+      (unless (eql 0 status)
+        (pushnew cid (unmoderated-comment-numbers data-db)))
       (render-node node :data-db data-db :site-db site-db)
       ;; Don't always have to do this, but figuring out when
       ;; is harder than just doing it.
@@ -792,6 +816,9 @@
          (permissions (getf user :permissions))
          (admin-p (memq :admin permissions))
          (comment (and comment-num (read-comment comment-num db)))
+         (node (and node-num (read-node node-num db)))
+         (post-alias (efh (car (getf node :aliases))))
+         (post-title (efh (getf node :title)))
          (uid (getf comment :uid))
          (created (getf comment :timestamp))
          (post-time (unix-time-to-rfc-1123-string
@@ -805,6 +832,9 @@
          (errmsg nil)
          captcha-explanation captcha-query captcha-response-size
          plist)
+    (when comment
+      (when (blankp author) (setf author (getf comment :name)))
+      (when (blankp email) (setf email (getf comment :mail))))
     (cond ((blankp author)
            (setf errmsg "Name may not be blank"))
           ((blankp body)
@@ -848,6 +878,8 @@
              (setf plist
                    (list* :comment-num comment-num
                           :node-num node-num
+                          :post-alias post-alias
+                          :post-title post-title
                           :moderated-p (null user)
                           :home home
                           :base base
@@ -914,27 +946,123 @@
                      (read-node nid db) node)
                (render-node node :data-db db :site-db site-db))
              (render-site-index :data-db db :site-db site-db)
-             (let ((base (compute-base-and-home uri https))
-                   (alias (or (car (getf node :aliases)) "")))
-               (unless (blankp alias)
-                 (setf alias (strcat alias "#comments")))
-               (hunchentoot:redirect (format nil "~a~a" base alias))))))))
+             (let ((base (compute-base-and-home uri https)))
+               (cond ((eql 0 (getf comment :status))
+                      (let ((alias (or (car (getf node :aliases)) "")))
+                        (unless (blankp alias)
+                          (setf alias (strcat alias "#comments")))
+                        (hunchentoot:redirect (format nil "~a~a" base alias))))
+                     (t (hunchentoot:redirect
+                         (format nil "~aadmin/moderate" base))))))))))
 
 ;; <baseurl>/admin/settings
 (defun settings (uri https)
-  (let ((db (get-port-db))
-        plist)
+  (let* ((db (get-port-db))
+         (session hunchentoot:*session*)
+         (uid (uid-of session))
+         (user (read-user uid db))
+         (admin-p (memq :admin (getf user :permissions)))
+         plist)
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (cond ((hunchentoot:parameter "logout")
              (end-session)
              (return-from settings (hunchentoot:redirect base))))
       (setf plist (list :home home
-                        :base base))
+                        :base base
+                        :admin-p admin-p))
       (render-template ".settings.tmpl" plist :data-db db))))
 
-;; <baseurl>/admin/add_post
-(defun add-post (uri https)
-  (edit-post nil uri https))
+;; <baseurl>/admin/moderate
+(defun moderate (uri https)
+  (submit-moderate uri https))
+
+(defun delete-comment (cid &key (data-db *data-db*) (site-db *site-db*)
+                       (render-index-p t))
+  (let ((comment (read-comment cid data-db)))
+    (when comment
+      (let* ((nid (getf comment :nid))
+             (node (read-node nid data-db)))
+        (when node
+          (setf (getf node :comments) (delete cid (getf node :comments))
+                (read-node nid data-db) node)
+          (when (eql 0 (getf comment :status))
+            (render-node node :data-db data-db :site-db site-db))
+          (when render-index-p
+            (render-site-index :data-db data-db :site-db site-db)))
+        (setf (read-comment cid) nil)
+        (setf (unmoderated-comment-numbers data-db)
+              (delete cid (unmoderated-comment-numbers data-db)))))))
+
+(defun approve-comment (cid &key (data-db *data-db*) (site-db *site-db*)
+                        (render-index-p t))
+  (let ((comment (read-comment cid data-db)))
+    (when (and comment (not (eql 0 (getf comment :status))))
+      (setf (getf comment :status) 0
+            (read-comment cid data-db) comment)      
+      (let* ((nid (getf comment :nid))
+             (node (read-node nid data-db)))
+        (when node
+          (render-node node :data-db data-db :site-db site-db)
+          (when render-index-p
+            (render-site-index :data-db data-db :site-db site-db)))))
+    (setf (unmoderated-comment-numbers data-db)
+          (delete cid (unmoderated-comment-numbers data-db)))))
+
+(defun submit-moderate (uri https &key submit)
+  (let* ((db (get-port-db))
+         (site-db (with-site-db (db) *site-db*))
+         (session hunchentoot:*session*)
+         (uid (uid-of session))
+         (user (read-user uid db))
+         (admin-p (memq :admin (getf user :permissions)))
+         comment-numbers comments plist)
+    (unless admin-p
+      (return-from submit-moderate
+        (redirect-to-error-page uri https $no-moderation-permission)))
+    (when submit
+      (dolist (cell (hunchentoot:post-parameters hunchentoot:*request*))
+        (let ((name (car cell))
+              (value (cdr cell)))
+          (when (eql 0 (search "c-" name :test #'equal))
+            (let ((cid (ignore-errors (parse-integer (subseq name 2)))))
+              (when cid
+                (cond ((equal value "x")
+                       (delete-comment cid :data-db db :site-db site-db
+                                       :render-index-p nil))
+                      ((equal value "ok")
+                       (approve-comment cid :data-db db :site-db site-db
+                                        :render-index-p nil))))))))
+      (render-site-index :data-db db :site-db site-db))
+    (setf comment-numbers (sort (unmoderated-comment-numbers db) #'>))
+    (loop with cnt = 100
+       for cid in comment-numbers
+       for comment = (read-comment cid db)
+       for name = (efh (getf comment :name))
+       for email = (efh (getf comment :mail))
+       for homepage = (efh (getf comment :homepage))
+       for subject = (efh (getf comment :subject))
+       for radio-name = (format nil "c-~d" cid)
+       for ok-checked = (equal "ok" (hunchentoot:post-parameter radio-name))
+       when comment do
+         (push (list :name name
+                     :email (unless (blankp email) email)
+                     :homepage (unless (blankp homepage) homepage)
+                     :cid cid
+                     :subject (if (blankp subject) "[blank]" subject)
+                     :radio-name radio-name
+                     :x-checked (not ok-checked)
+                     :ok-checked ok-checked)
+               comments)
+         (when (<= (decf cnt) 0) (return))
+       unless comment do
+         (setf (unmoderated-comment-numbers db)
+               (delete cid (unmoderated-comment-numbers db))))
+    (setf comments (nreverse comments))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (setf plist (list :home home
+                        :base base
+                        :comments comments))
+      (render-template ".moderate-comments.tmpl" plist :data-db db))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

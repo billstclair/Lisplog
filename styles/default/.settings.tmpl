@@ -1,5 +1,7 @@
 <h2 class="content-title">Settings</h2>
-<br/>
+<p><!-- TMPL_IF admin-p -->
+<a href="admin/moderate">Comment Moderation</a><br/><!-- /TMPL_IF -->
+</p>
 <form action="admin/settings" method="post">
   <input type="submit" name="logout" value="Logout"/>
 </form>

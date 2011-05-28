@@ -1,0 +1,26 @@
+<h2 class="content-title">Moderate Comments</h2>
+<br/>
+<form action="admin/submit_moderate" method="post">
+  <table class="prettytable">
+    <tr>
+      <th>X</th><th>OK</th>
+      <th>Name</th><th>Homepage</th><th>Subject</th><th>Email</th>
+    </tr><!-- TMPL_LOOP comments -->
+    <tr>
+      <td><input type="radio" name="<!-- TMPL_VAR radio-name -->" value="x"<!-- TMPL_IF x-checked --> checked="checked"<!-- /TMPL_IF -->/></td>
+      <td><input type="radio" name="<!-- TMPL_VAR radio-name -->" value="ok"<!-- TMPL_IF ok-checked --> checked="checked"<!-- /TMPL_IF -->/></td>
+      <td><!-- TMPL_VAR name --></td>
+      <td><!-- TMPL_IF homepage -->
+        <a href="<!-- TMPL_VAR homepage -->"><!-- TMPL_VAR homepage --></a><!-- TMPL_ELSE -->
+        &nbsp;<!-- /TMPL_IF  -->
+      </td>
+      <td><a href="admin?edit_comment=<!-- TMPL_VAR cid -->"><!-- TMPL_VAR subject --></a></td>
+      <td><!-- TMPL_IF email -->
+        <a href="mailto:<!-- TMPL_VAR email -->"><!-- TMPL_VAR email --></a><!-- TMPL_ELSE -->
+        &nbsp;<!-- /TMPL_IF -->
+      </td>
+    </tr><!-- /TMPL_LOOP -->
+  </table>
+  <input type="submit" name="refresh" value="Refresh"/>
+  <input type="submit" name="submit" value="Submit"/>
+</form>

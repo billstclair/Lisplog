@@ -121,6 +121,20 @@
 (defun probe-comment (cid &optional (db *data-db*))
   (sexp-probe db $COMMENTS cid))
 
+(defun unmoderated-comment-numbers (&optional (db *data-db*))
+  (unless (sexp-probe db $MODERATION $COMMENTS :subdirs-p nil)
+    (let ((comments nil))
+      (do-comments (comment db)
+        (unless (eql 0 (getf comment :status))
+          (push (getf comment :cid) comments)))
+      (setf (unmoderated-comment-numbers db) comments)))
+  (let ((comments (sexp-get db $MODERATION $COMMENTS :subdirs-p nil)))
+    (if (null (car comments)) (cdr comments) comments)))
+
+(defun (setf unmoderated-comment-numbers) (comments &optional (db *data-db*))
+  (when (null comments) (push nil comments)) ;don't delete the file
+  (setf (sexp-get db $MODERATION $COMMENTS :subdirs-p nil) comments))
+
 (defun read-user (user-num &optional (db *data-db*))
   (sexp-get db $USERS user-num))
 
@@ -334,7 +348,7 @@
      for plist = (data-get $COMMENTS num)
      for text = (getf plist :comment)
      for format = (getf plist :format)
-     for unapproved-p = (eql 1 (getf plist :status))
+     for unapproved-p = (not (eql 0 (getf plist :status)))
      unless unapproved-p
      do
        (unless (eql format $raw-html-format)
@@ -465,7 +479,7 @@
               (let ((cnt 0))
                 (dolist (comment-num (getf plist :comments))
                   (let ((comment-plist (read-comment comment-num db)))
-                    (unless (eql 1 (getf comment-plist :status))
+                    (when (eql 0 (getf comment-plist :status))
                       (incf cnt))))
                 (when (> cnt 0)
                   (setf (getf plist :comment-count)

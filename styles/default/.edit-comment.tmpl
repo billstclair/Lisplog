@@ -15,6 +15,9 @@ Preview:
     <fieldset>
       <table>
         <tr>
+          <td><span class="label">Post:</span></td>
+          <td><a href="<!-- TMPL_VAR post-alias -->"><!-- TMPL_VAR post-title --></a></td>
+        <tr>
           <td><span class="label">Name:</span> <span class="form-required">*</span></td>
           <td><!-- TMPL_IF edit-name-p --><input type="text" name="author" size="50" value="<!-- TMPL_VAR author -->"/><!-- TMPL_ELSE --><!-- TMPL_VAR author --><!-- /TMPL_IF --></td>
         </tr><tr>
