@@ -1,5 +1,8 @@
-<h2 class="content-title"><!-- TMPL_IF comment-num -->Edit Comment #<!-- TMPL_VAR comment-num --><!-- TMPL_ELSE -->Add Comment<!-- /TMPL_IF --></h2>
-<br/><!-- TMPL_IF preview -->
+<h2 class="content-title"><!-- TMPL_IF comment-num -->Edit Comment #<!-- TMPL_VAR comment-num --><!-- TMPL_ELSE -->Add Comment<!-- /TMPL_IF --></h2><!-- TMPL_IF moderated-p -->
+<p>Unless you <a href="admin?add_comment=<!-- TMPL_VAR node-num -->&login=t">login</a>,
+your comment won't appear until it has been moderated.</p>
+<!-- TMPL_ELSE -->
+<br/><!-- /TMPL_IF --><!-- TMPL_IF preview -->
 Preview:
 <div class="comment-preview">
   <!-- TMPL_VAR preview -->
@@ -12,7 +15,7 @@ Preview:
     <fieldset>
       <table>
         <tr>
-          <td><span class="label">Name:</span></td>
+          <td><span class="label">Name:</span> <span class="form-required">*</span></td>
           <td><!-- TMPL_IF edit-name-p --><input type="text" name="author" size="50" value="<!-- TMPL_VAR author -->"/><!-- TMPL_ELSE --><!-- TMPL_VAR author --><!-- /TMPL_IF --></td>
         </tr><tr>
           <td><span class="label">Email:</span></td>
@@ -40,7 +43,17 @@ Preview:
       <input type="radio" name="input-format" value="filtered-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Filtered HTML<br/>
       <input type="radio" name="input-format" value="full-html"<!-- TMPL_IF full-html --> checked="checked"<!-- /TMPL_IF -->/> Full HTML<br/>
       <input type="radio" name="input-format" value="raw-html"<!-- TMPL_IF raw-html --> checked="checked"<!-- /TMPL_IF -->/> Raw HTML<br/>
-    </fieldset><!-- /TMPL_IF -->
+    </fieldset><!-- /TMPL_IF --><!-- TMPL_IF captcha-hidden --><!-- TMPL_IF captcha-query -->
+    <fieldset>
+      <legend>Captcha</legend>
+      <!-- TMPL_VAR captcha-explanation --><br/>
+      <!-- TMPL_VAR captcha-query -->
+      <input type="text" name="captcha-response" size="<!-- TMPL_VAR captcha-response-size -->" value="<!-- TMPL_VAR captcha-response -->"/>
+    </fieldset><!-- TMPL_ELSE -->
+    <input type="hidden" name="captcha-response" value="<!-- TMPL_VAR captcha-response -->"/><!-- /TMPL_IF -->
+    <input type="hidden" name="captcha-hidden" value="<!-- TMPL_VAR captcha-hidden -->"/><!-- /TMPL_IF -->
+    <p>I won't publish your email address. Include it if you want me to be able
+       to contact you.</p>
     <p>
     <input type="submit" name="preview" value="Preview">
     <input type="submit" name="submit" value="Submit"><!-- TMPL_IF node-num -->

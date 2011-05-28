@@ -48,9 +48,11 @@
 
 ;; <baseurl>/admin/?command=value
 (hunchentoot:define-easy-handler (handle-admin :uri "/")
-    (node edit_post add_comment edit_comment uri https error)
+    (node edit_post add_comment login edit_comment uri https error)
   (setf (hunchentoot:content-type*) "text/html")
-  (cond (add_comment (add-comment add_comment uri https))
+  (cond (add_comment
+         (or (and login (login-screen uri https))
+             (add-comment add_comment uri https)))
         ((login-screen uri https))
         (node (render-web-node node uri https))
         (edit_post (edit-post edit_post uri https))
@@ -87,6 +89,7 @@
 ;; <baseurl>/admin/submit_comment
 (hunchentoot:define-easy-handler (handle-submit-comment :uri "/submit_comment")
     (uri https comment-num node-num author email homepage title published body
+         captcha-response captcha-hidden
          input-format preview submit delete)
   (setf comment-num (ignore-errors (parse-integer comment-num))
         node-num (ignore-errors (parse-integer node-num)))
@@ -101,6 +104,8 @@
    :published published
    :body body
    :input-format input-format
+   :captcha-response captcha-response
+   :captcha-hidden captcha-hidden
    :preview preview
    :submit submit
    :delete delete))
@@ -667,8 +672,8 @@
 (defun edit-comment (comment-num uri https &key node-num)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
-         (session-uid (uid-of session))
-         (user (read-user session-uid db))
+         (session-uid (and session (uid-of session)))
+         (user (and session-uid (read-user session-uid db)))
          (permissions (getf user :permissions))
          (admin-p (memq :admin permissions))
          (comment (and comment-num (read-comment comment-num db)))
@@ -680,7 +685,8 @@
          (author (getf comment :name))
          (email (getf comment :mail))
          (homepage (getf comment :homepage))
-         (status (getf comment :status)))
+         (status (getf comment :status))
+         captcha-explanation captcha-query captcha-response-size captcha-hidden)
     (unless node-num
       (setf node-num (getf comment :nid)))
     (when (and (blankp author) user)
@@ -694,9 +700,16 @@
                      (or admin-p (eql uid session-uid))))
       (return-from edit-comment
         (redirect-to-error-page uri https $no-edit-comment-permission)))
+    (unless user
+      (let ((captcha (make-captcha db)))
+        (setf captcha-explanation (captcha-query-explanation captcha)
+              captcha-query (captcha-query-html captcha)
+              captcha-response-size (captcha-response-size captcha)
+              captcha-hidden (captcha-hidden-value captcha))))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (let ((plist (list* :comment-num comment-num
                           :node-num node-num
+                          :moderated-p (not user)
                           :home home
                           :base base
                           :author (efh author)
@@ -709,6 +722,10 @@
                           :edit-name-p (not uid)
                           :show-published-p admin-p
                           :show-input-format admin-p
+                          :captcha-explanation captcha-explanation
+                          :captcha-query captcha-query
+                          :captcha-response-size captcha-response-size
+                          :captcha-hidden captcha-hidden
                           (node-format-to-edit-post-plist format))))
         (render-template ".edit-comment.tmpl" plist :data-db db)))))
 
@@ -764,27 +781,33 @@
       (values cid (car (getf node :aliases))))))
 
 (defun submit-comment (uri https &key comment-num node-num author email homepage
-                       title published body input-format preview submit delete)
+                       title published body input-format
+                       captcha-response captcha-hidden
+                       preview submit delete)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
          (site-db (with-site-db (db) *site-db*))
-         (session-uid (uid-of session))
-         (user (read-user session-uid db))
+         (session-uid (and session (uid-of session)))
+         (user (and session-uid (read-user session-uid db)))
          (permissions (getf user :permissions))
          (admin-p (memq :admin permissions))
          (comment (and comment-num (read-comment comment-num db)))
          (uid (getf comment :uid))
          (created (getf comment :timestamp))
-         (post-time (and created (unix-time-to-rfc-1123-string created)))
+         (post-time (unix-time-to-rfc-1123-string
+                     (or created (get-unix-time))))
          (status (if session-uid
                      (if (blankp published) 1 0)
                      1))                ;not published for unlogged-in commentor
          (format (if admin-p
                      (node-format-name-to-number input-format)
-                     1))                ;filtered-html for unlogged-in commentor
+                     1))                ;filtered-html for non-admin commentor
          (errmsg nil)
+         captcha-explanation captcha-query captcha-response-size
          plist)
-    (cond ((blankp body)
+    (cond ((blankp author)
+           (setf errmsg "Name may not be blank"))
+          ((blankp body)
            (setf errmsg "Body may not be blank")
            (when comment
              (setf body (getf comment :comment)))))
@@ -794,17 +817,6 @@
                       body-len
                       (or (position #\space body :start 20) 20))))
         (setf title (subseq body 0 pos))))
-    (when (blankp author)
-      (setf author (getf comment :name))
-      (when (blankp author)
-        (return-from submit-comment
-          (redirect-to-error-page uri https $name-may-not-be-blank))))
-    (when (blankp email)
-      (setf email (getf comment :mail)))
-    (when (blankp homepage)
-      (setf homepage (getf comment :homepage))
-      (when (blankp homepage)
-        (setf homepage nil)))
     (unless (or (null comment-num)
                 (and session-uid user
                      (or admin-p (eql uid session-uid))))
@@ -813,11 +825,30 @@
     (when (and comment-num (not comment))
       (return-from submit-comment
         (redirect-to-error-page uri https $unknown-comment-number)))
+    (when (blankp email) (setf email nil))
+    (when (blankp homepage) (setf homepage nil))
+    (unless user
+      (unless (blankp captcha-response)
+        (multiple-value-bind (ok reason)
+            (validate-captcha captcha-response captcha-hidden)
+          (unless ok
+            (setf errmsg
+                  (if (eq reason :timeout)
+                      "Captcha timed out. Enter new answer."
+                      "Wrong answer to captcha. Try again."))
+            (setf captcha-response nil))))
+      (when (blankp captcha-response)
+        (let ((captcha (make-captcha db)))
+          (setf captcha-explanation (captcha-query-explanation captcha)
+                captcha-query (captcha-query-html captcha)
+                captcha-response-size (captcha-response-size captcha)
+                captcha-hidden (captcha-hidden-value captcha)))))
     (cond ((or preview errmsg)
            (multiple-value-bind (base home) (compute-base-and-home uri https)
              (setf plist
                    (list* :comment-num comment-num
                           :node-num node-num
+                          :moderated-p (null user)
                           :home home
                           :base base
                           :errmsg (efh errmsg)
@@ -831,6 +862,11 @@
                           :edit-name-p (not uid)
                           :show-published-p admin-p
                           :show-input-format admin-p
+                          :captcha-explanation captcha-explanation
+                          :captcha-query captcha-query
+                          :captcha-response-size captcha-response-size
+                          :captcha-response captcha-response
+                          :captcha-hidden captcha-hidden
                           (node-format-to-edit-post-plist format)))
              (when preview
                (let* ((template-name (get-comment-template-name db))
