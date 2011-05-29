@@ -1,6 +1,4 @@
-blogroll
-
-Drupal formatting respects <pre>...</pre>
+do-drupal-formatting respects <pre>...</pre>
 
 Latest comments block on home page.
 
@@ -9,17 +7,15 @@ Latest comments block on home page.
 Dynamic server
 ==============
 
-do-drupal-formatting needs to support filtered-html and auto-links.
-
-Create comments
-Test delete comments
-CAPTCHA
-Comment moderation.
-
 RSS generation for site
 RSS parsing and display (news feed)
+  Periodic task to update
 
 Go LIVE!
+
+blogroll
+banners page
+Update FAQ
 
 ctrl-shift-Q javascript to enter blockquote
 

@@ -911,8 +911,7 @@
                              :name author
                              :homepage homepage
                              :post-date post-time
-                             :comment (cond ((eql format $raw-html-format) body)
-                                            (t (drupal-format body)))
+                             :comment (drupal-format body format)
                              :home home
                              :permalink (and alias (efh alias)))))
                  (setf (getf plist :preview)

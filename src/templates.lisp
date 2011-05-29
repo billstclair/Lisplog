@@ -305,20 +305,89 @@
                            (subseq str ne)))))
   str)
 
-(defun drupal-format (str)
-  (process-interwiki-references
-   (eliminate-empty-paragraphs
-    (do-drupal-line-breaks
-        (do-drupal-quotes str)))))
+;; <a> <em> <strong> <cite> <code> <ul> <ol> <li> <dl> <dt> <dd> <i> <b> <u>
+;; <blockquote>
+(defparameter *allowed-html-tags*
+  '("br"
+    "p"
+    "a"
+    "blockquote"
+    "em"
+    "strong"
+    "cite"
+    "code"
+    "ul"
+    "ol"
+    "li"
+    "dl"
+    "dt"
+    "dd"
+    "i"
+    "b"
+    "u"
+    ))    
+
+(defun filter-html (str)
+  (with-output-to-string (s)
+    (loop with pos = 0
+       with len-1 = (1- (length str))
+       for less-pos = (position #\< str :start pos)
+       while less-pos do
+         (write-string str s :start pos :end less-pos)
+         (let* ((find-start (+ less-pos
+                               (if (and (< less-pos len-1)
+                                        (eql (aref str (1+ less-pos)) #\/))
+                                   2 1)))
+                (end-pos (position-if (lambda (c) (member c '(#\space #\>)))
+                                      str :start find-start))
+                (tag nil))
+           (when end-pos
+             (when (eql #\/ (aref str (1- end-pos))) (decf end-pos))
+             (setf tag (subseq str find-start end-pos)))
+           (cond (tag
+                  (if (member tag *allowed-html-tags* :test #'string-equal)
+                      (write-char #\< s)
+                      (write-string "&lt;" s))
+                  (setf pos (1+ end-pos))
+                  (write-string str s :start (1+ less-pos) :end pos))
+                 (t (write-char #\< s)
+                    (setf pos (1+ less-pos)))))
+       finally (write-string str s :start pos))))
+
+(defun linkify (str)
+  (cl-ppcre:regex-replace-all
+   "(\\s|^)(https?://\\S+?)(\\s|<|$)"
+   (cl-ppcre:regex-replace-all
+    "(\\s|^)(\\S+@\\S+?\\.\\S+?)(\\s|<|$)"
+    str
+    "\\1<a href='mailto:\\2'>\\2</a>\\3")
+   "\\1<a href='\\2'>\\2</a>\\3"))
+
+(defun drupal-format (str &optional format)
+  (if (eql format $raw-html-format)
+      str
+      (let ((res (process-interwiki-references
+                  (eliminate-empty-paragraphs
+                   (do-drupal-line-breaks
+                       (do-drupal-quotes str))))))
+        (linkify
+         (if (eql format $filtered-html-format)
+             (filter-html res)
+             res)))))
+
+(defconstant $filtered-html-format 1)
+(defconstant $full-html-format 3)
+(defconstant $raw-html-format 5)
 
 ;; This deals with [quote]...[/quote] from Drupal
-(defun do-drupal-formatting (plist)
-  (let ((body (getf plist :body))
-        (teaser (getf plist :teaser)))
+(defun drupal-format-node (plist &optional format)
+  (unless (eql format $raw-html-format)
+    (let ((body (getf plist :body))
+          (teaser (getf plist :teaser)))
       (when body
-        (setf (getf plist :body) (drupal-format body)))
+        (setf (getf plist :body) (drupal-format body format)))
       (when teaser
-        (setf (getf plist :teaser) (drupal-format teaser))))
+        (setf (getf plist :teaser) (drupal-format teaser format)))))
   plist)
 
 (defun fill-templates-in-plist (plist values)
@@ -335,10 +404,6 @@
   (loop for block-num in (getf settings :block-nums)
      collect (data-get $BLOCKS block-num)))
 
-(defconstant $filtered-html-format 1)
-(defconstant $full-html-format 3)
-(defconstant $raw-html-format 5)
-
 (defun fetch-comments (numbers &optional (*data-db* *data-db*))
   (unless (listp numbers)
     (let ((plist (data-get $NODES numbers)))
@@ -351,8 +416,7 @@
      for unapproved-p = (not (eql 0 (getf plist :status)))
      unless unapproved-p
      do
-       (unless (eql format $raw-html-format)
-         (setf text (drupal-format text)))
+       (setf text (drupal-format text format))
        (setf (getf plist :comment) text
              (getf plist :post-date)
              (unix-time-to-rfc-1123-string (getf plist :timestamp)))
@@ -425,8 +489,7 @@
            (format (getf plist :format))
            (user-plist (data-get $USERS uid :db data-db)))
       (when (or unpublished-p (eql status 1))
-        (unless (eql format $raw-html-format)
-          (setf plist (do-drupal-formatting plist)))
+        (setf plist (drupal-format-node plist format))
         (setf (getf plist :post-date)
               (unix-time-to-rfc-1123-string created))
         (setf (getf plist :author) (getf user-plist :name))
