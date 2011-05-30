@@ -255,19 +255,39 @@
    "[quote]" "</p><blockquote><p>"
    (fsdb:str-replace "[/quote]" "</p></blockquote><p>" str)))
 
+(defun find-pre-sections (str)
+  (let ((res nil))
+    (loop with pos = 0
+       for pre-pos = (search "<pre>" str :test #'string-equal :start2 pos)
+       for slash-pre-pos = (and pre-pos
+                                (search "</pre>" str
+                                        :test #'string-equal
+                                        :start2 (+ pre-pos 5)))
+       while slash-pre-pos do
+         (setf pos (+ slash-pre-pos 6))
+         (push (cons pre-pos pos) res))
+    (nreverse res)))
+
 (defun do-drupal-line-breaks (str)
-  (with-input-from-string (s str)
+  (with-input-from-string (s (remove #\return str))
     (with-output-to-string (os)
       (princ "<p>" os)
-      (do-drupal-line-breaks-internal s os)
+      (do-drupal-line-breaks-internal s os (find-pre-sections str))
       (princ "</p>" os))))
 
-(defun do-drupal-line-breaks-internal (s os)
+(defun do-drupal-line-breaks-internal (s os pre-sections)
   (loop with last-ch-newline-p = nil
+     with idx = 0
      for ch = (read-char s nil :eof)
      until (eq ch :eof)
      do
-       (cond ((eql ch #\newline)
+       (cond ((find idx pre-sections
+                    :test (lambda (idx x.y)
+                            (and (<= (1- (car x.y)) idx)
+                                 (<= idx (cdr x.y)))))
+              (setf last-ch-newline-p nil)
+              (write-char ch os))
+             ((eql ch #\newline)
               (cond (last-ch-newline-p
                      (format os "</p>~%~%<p>")
                      (setf last-ch-newline-p nil))
@@ -275,7 +295,8 @@
              (t (when last-ch-newline-p
                   (format os "<br/>~&")
                   (setf last-ch-newline-p nil))
-                (write-char ch os)))))
+                (write-char ch os)))
+       (incf idx)))
 
 (defun eliminate-empty-paragraphs (str)
   (fsdb:str-replace "<p></p>" "" str))
@@ -312,6 +333,7 @@
     "p"
     "a"
     "blockquote"
+    "pre"
     "em"
     "strong"
     "cite"

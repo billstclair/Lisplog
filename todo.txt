@@ -1,4 +1,4 @@
-do-drupal-formatting respects <pre>...</pre>
+Doc string for html filtering.
 
 Latest comments block on home page.
 
@@ -18,6 +18,9 @@ banners page
 Update FAQ
 
 ctrl-shift-Q javascript to enter blockquote
+
+Close <a> tags, to prevent the whole rest of the page from being caught.
+  These won't get through comment moderation, so no biggy for now
 
 Re-render subsets of the site or whole site.
 Dynamic serving. Is it faster? Is it faster if I preload the data?
