@@ -1,5 +1,3 @@
-Doc string for html filtering.
-
 Latest comments block on home page.
 
 [quote person]

@@ -37,7 +37,20 @@ Preview:
     <fieldset>
       <legend>Input format</legend>
       <input type="radio" name="input-format" value="filtered-html"<!-- TMPL_IF filtered-html --> checked="checked"<!-- /TMPL_IF -->/> Filtered HTML<br/>
+      <div class="format-doc">
+        <ul>
+          <li>convert line and paragraph breaks to &lt;br&gt; & &lt;p&gt;</li>
+          <li>convert URLs and email address to links</li>
+          <li>allowed HTML tags: &lt;a&gt; &lt;em&gt; &lt;strong&gt; &lt;cite&gt; &lt;code&gt; &lt;ul&gt; &lt;ol&gt; &lt;li&gt; &lt;dl&gt; &lt;dt&gt; &lt;dd&gt; &lt;i&gt; &lt;b&gt; &lt;u&gt; &lt;blockquote&gt; &lt;pre&gt;</li>
+        </ul>
+      </div>
       <input type="radio" name="input-format" value="full-html"<!-- TMPL_IF full-html --> checked="checked"<!-- /TMPL_IF -->/> Full HTML<br/>
+      <div class="format-doc">
+        <ul>
+          <li>convert line and paragraph breaks to &lt;br&gt; & &lt;p&gt;</li>
+          <li>convert URLs and email address to links</li>
+        </ul>
+      </div>
       <input type="radio" name="input-format" value="raw-html"<!-- TMPL_IF raw-html --> checked="checked"<!-- /TMPL_IF -->/> Raw HTML<br/>
     </fieldset>
     <p>
