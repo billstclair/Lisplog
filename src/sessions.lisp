@@ -162,7 +162,7 @@
    (hunchentoot:session-cookie-name hunchentoot:*acceptor*)
    :value ""
    :path "/"
-   :expires 0))
+   :expires (- (get-universal-time) 1000)))
 
 (defmethod hunchentoot:session-cookie-value ((session session))
   (session-id-of session))

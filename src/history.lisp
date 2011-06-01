@@ -40,6 +40,18 @@
          (declare (dynamic-extent #',thunk))
          (map-comments #',thunk ,db)))))
 
+(defun last-n-active-comments (n &optional (db *data-db*))
+  (let ((cid (read-cid db))
+        (res nil)
+        (cnt 0))
+    (loop for comment = (read-comment cid db)
+       do
+         (when (eql 0 (getf comment :status))
+           (push comment res)
+           (when (>= (incf cnt) n)
+             (return (nreverse res))))
+         (decf cid))))    
+
 (defun map-users (function &optional (db *data-db*))
   (map-nodes-or-comments function $USERS db))
 
