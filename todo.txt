@@ -1,11 +1,5 @@
-[quote person]
-
 Dynamic server
 ==============
-
-RSS generation for site
-RSS parsing and display (news feed)
-  Periodic task to update
 
 Go LIVE!
 
@@ -13,6 +7,12 @@ blogroll
 banners page
 Update FAQ
 
+RSS parsing and display (news feed)
+  Periodic task to update
+
+Registration and user settings editor.
+
+[quote person]
 ctrl-shift-Q javascript to enter blockquote
 
 Close <a> tags, to prevent the whole rest of the page from being caught.
