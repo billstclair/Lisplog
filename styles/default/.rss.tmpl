@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<rss version="2.0" xml:base="<!-- TMPL_VAR base-url -->">
+<channel>
+ <title><!-- TMPL_VAR blog-title --></title>
+ <link><!-- TMPL_VAR base-url --></link>
+ <description><!-- TMPL_VAR blog-description --></description>
+ <language>en</language>
+ <managingEditor><!-- TMPL_VAR blog-editor --></managingEditor><!-- TMPL_LOOP items -->
+<item>
+ <title><!-- TMPL_VAR title --></title>
+ <link><!-- TMPL_VAR link --></link>
+ <description><!-- TMPL_VAR description --></description><!-- TMPL_LOOP categories -->
+ <category domain="<!-- TMPL_VAR domain -->"><!-- TMPL_VAR name --></category><!-- /TMPL_LOOP -->
+ <pubDate><!-- TMPL_VAR pubdate --></pubDate>
+</item><!-- /TMPL_LOOP  -->
+</channel>
+</rss>

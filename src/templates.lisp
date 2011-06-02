@@ -651,7 +651,38 @@
       (setf (getf plist :home) ".")
       (setf (fsdb:db-get site-db file-name)
             (render-template post-template-name plist :data-db data-db))
+      (render-rss :data-db data-db :site-db site-db :node-plists node-plists)
       file-name)))
+
+(defun render-rss (&key (data-db *data-db*) (site-db *site-db*)
+                   (node-plists (get-node-plists-for-index-page data-db)))
+  (with-settings (data-db)
+    (let* ((blog-title (efh (get-setting :site-name)))
+           (base-url (efh (get-setting :site-url)))
+           (blog-description (efh (get-setting :site-slogan)))
+           (blog-editor (efh (get-setting :site-editor)))
+           (items (loop for plist in node-plists
+                     for title = (efh (getf plist :title))
+                     for link = (efh (strcat base-url (getf plist :permalink)))
+                     for description = (efh (getf plist :body))
+                     for categories = nil ;do this once we have URLs for categories
+                     for pubdate = (getf plist :post-date)
+                     collect (list :title title
+                                   :link link
+                                   :description description
+                                   :categories categories
+                                   :pubdate pubdate)))
+           (plist (list :base-url base-url
+                        :blog-title blog-title
+                        :blog-description blog-description
+                        :blog-editor blog-editor
+                        :items items))
+           (template-name (or (get-setting :rss-template) ".rss.tmpl"))
+           (template (get-style-file template-name data-db))
+           (rss-file-name (or (get-setting :rss-file-name) "rss.xml")))
+      (setf (fsdb:db-get site-db rss-file-name)
+            (fill-and-print-to-string template plist))
+      rss-file-name)))          
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
