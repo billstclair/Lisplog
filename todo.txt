@@ -1,3 +1,18 @@
+;Compiler warnings for "home:lisplog;src;history.lisp.newest" :
+;   In GET-DAY-ALIST: Undefined function (SETF ASSQV)
+;Compiler warnings for "home:lisplog;src;templates.lisp.newest" :
+;   In #:THUNK48822 inside GET-NODE-PLISTS-FOR-INDEX-PAGE: Macro function DO-NODE-NUMS-BEFORE-TIME was used before it was defined.
+;   In #:THUNK48822 inside GET-NODE-PLISTS-FOR-INDEX-PAGE: Undefined function NODE-NUM
+;   In READ-CID: Undefined function COMMENT
+;   In READ-CID: Macro function DO-COMMENTS was used before it was defined.
+;   In READ-NID: Undefined function NODE
+;   In READ-NID: Macro function DO-NODES was used before it was defined.
+;   In UNMODERATED-COMMENT-NUMBERS: Undefined function COMMENT
+;   In UNMODERATED-COMMENT-NUMBERS: Macro function DO-COMMENTS was used before it was defined.
+;   In GET-STYLE-FILE: Undefined function DB
+;   In GET-STYLE-FILE: Macro function WITH-SETTINGS was used before it was defined.
+
+
 Dynamic server
 ==============
 

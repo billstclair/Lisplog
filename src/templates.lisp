@@ -38,6 +38,15 @@
 ;;; Accessing styles and site files
 ;;;
 
+(defmacro with-settings ((&optional data-db) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(flet ((,thunk (*settings*) ,@body))
+       (declare (dynamic-extent #',thunk))
+       (call-with-settings #',thunk ,data-db))))
+
+(defun call-with-settings (thunk data-db)
+  (funcall thunk (or *settings* (read-settings data-db))))
+
 (defun get-style-file (file &optional (db *data-db*))
   (with-settings (db)
     (let ((style (get-setting :style)))
@@ -83,15 +92,6 @@
   (unless data-db
     (setf data-db *data-db*))
   (setf (sexp-get data-db nil $SETTINGS :subdirs-p nil) value))
-
-(defmacro with-settings ((&optional data-db) &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(flet ((,thunk (*settings*) ,@body))
-       (declare (dynamic-extent #',thunk))
-       (call-with-settings #',thunk ,data-db))))
-
-(defun call-with-settings (thunk data-db)
-  (funcall thunk (or *settings* (read-settings data-db))))
 
 ;;;
 ;;; Template operations

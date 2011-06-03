@@ -119,7 +119,7 @@
     (when nid
       (when (equal (getf plist :teaser) (getf plist :body))
         (setf (getf plist :teaser) nil))
-      (setf (node-get db $NODES nid) plist)
+      (setf (sexp-get db $NODES nid) plist)
       nil)))
 
 ;; (set' db (fsdb:make-fsdb "~/lisplog/data"))
@@ -154,7 +154,7 @@
       (format t "Comment: ~s for node: ~s~%" cid nid))
     (updating-node (node db $NODES nid)
       (pushnew cid (getf node :comments)))
-    (setf (node-get db $COMMENTS cid) plist)))
+    (setf (sexp-get db $COMMENTS cid) plist)))
 
 (defun parse-drupal-comments-csv (db &optional file verbose)
   (unless file
@@ -169,7 +169,7 @@
         (let ((name (getf plist :name))
               (mail (getf plist :mail)))
           (format t "~s ~s ~s~%" uid name mail)))
-      (setf (node-get db $USERS uid) plist))))
+      (setf (sexp-get db $USERS uid) plist))))
 
 ;; Remember to "Replace NULL by" blank, not "NULL", in the
 ;; phpMyAdmin export form.
@@ -182,7 +182,7 @@
   (let ((key (getf plist :iw_prefix)))
     (when verbose-p (print plist))
     (unless (blankp key)
-      (setf (node-get db $INTERWIKI key :subdirs-p nil) plist))))
+      (setf (sexp-get db $INTERWIKI key :subdirs-p nil) plist))))
 
 (defun parse-drupal-interwiki-csv (db &optional file verbose-p)
   (unless file
@@ -195,7 +195,7 @@
     (when (eql vid 3)
       (when verbose-p (print plist))
       (unless (blankp key)
-        (setf (node-get db $CATEGORIES key :subdirs-p nil) plist)))))
+        (setf (sexp-get db $CATEGORIES key :subdirs-p nil) plist)))))
 
 (defun parse-drupal-category-csv (db &optional file verbose-p)
   (unless file

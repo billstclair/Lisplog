@@ -7,71 +7,6 @@
 
 (in-package :lisplog)
 
-(defun map-nodes-or-comments (function nodes-or-comments &optional (db *data-db*))
-  "Calls function with the plist for each node, in directory order"
-  (flet ((get-node (path file)
-           (let ((str (fsdb:db-get db path file)))
-             (when str (read-from-string str)))))
-    (declare (dynamic-extent #'get-node))
-    (dolist (file (fsdb:db-contents db nodes-or-comments))
-      (let ((path (fsdb:append-db-keys nodes-or-comments file)))
-        (cond ((fsdb:db-dir-p db path)
-               (dolist (file (fsdb:db-contents db path))
-                 (funcall function (get-node path file))))
-              (t (funcall function (get-node nodes-or-comments file))))))))
-
-(defun map-nodes (function &optional (db *data-db*))
-  (map-nodes-or-comments function $NODES db))
-
-(defmacro do-nodes ((node &optional (db '*data-db*)) &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(block nil
-       (flet ((,thunk (,node) ,@body))
-         (declare (dynamic-extent #',thunk))
-         (map-nodes #',thunk ,db)))))
-
-(defun map-comments (function &optional (db *data-db*))
-  (map-nodes-or-comments function $COMMENTS db))
-
-(defmacro do-comments ((comment &optional (db '*data-db*)) &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(block nil
-       (flet ((,thunk (,comment) ,@body))
-         (declare (dynamic-extent #',thunk))
-         (map-comments #',thunk ,db)))))
-
-(defun last-n-active-comments (n &optional (db *data-db*))
-  (let ((cid (read-cid db))
-        (res nil)
-        (cnt 0))
-    (loop for comment = (read-comment cid db)
-       do
-         (when (eql 0 (getf comment :status))
-           (push comment res)
-           (when (>= (incf cnt) n)
-             (return (nreverse res))))
-         (decf cid))))    
-
-(defun map-users (function &optional (db *data-db*))
-  (map-nodes-or-comments function $USERS db))
-
-(defmacro do-users ((user &optional (db '*data-db*)) &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(block nil
-       (flet ((,thunk (,user) ,@body))
-         (declare (dynamic-extent #',thunk))
-         (map-users #',thunk ,db)))))
-
-(defun map-categories (function &optional (db *data-db*))
-  (map-nodes-or-comments function $CATEGORIES db))
-
-(defmacro do-categories ((cat &optional (db '*data-db*)) &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(block nil
-       (flet ((,thunk (,cat) ,@body))
-         (declare (dynamic-extent #',thunk))
-         (map-categories #',thunk ,db)))))
-
 (defun read-usernamehash (username &optional (db *data-db*))
   (let ((hash (md5 username)))
     (data-get $USERNAMEHASH hash :db db)))
@@ -207,14 +142,6 @@ as integers."
           (dolist (info (get-month-post-info year month :db db))
             (when (or (null unix-time) (< (cdr info) unix-time))
               (funcall function (car info)))))))))
-
-(defmacro do-node-nums-before-time ((node-num unix-time &optional (db '*data-db*))
-                                    &body body)
-  (let ((thunk (gensym "THUNK")))
-    `(block nil
-       (flet ((,thunk (,node-num) ,@body))
-         (declare (dynamic-extent #',thunk))
-         (map-node-nums-before-time #',thunk ,unix-time ,db)))))
 
 ;; ((:link "post-name.html" :title "Post Name") ...)
 (defun get-node-nums-before-time (count unix-time &optional (db *data-db*))
@@ -357,9 +284,8 @@ as integers."
            (let ((cell (assoc d day-alist)))
              (if cell
                  (push info (cdr cell))
-                 (push (list d info) day-alist)))
-           (push info (assqv d day-alist))))
-        (sort day-alist #'< :key #'car)))
+                 (push (list d info) day-alist)))))
+    (sort day-alist #'< :key #'car)))
 
 ;; (:month "April 2011"
 ;;  :days ((:date-string "Thursday, 28 April"
