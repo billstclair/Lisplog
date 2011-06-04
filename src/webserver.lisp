@@ -17,17 +17,18 @@
       (flexi-streams:make-external-format :utf8 :eol-style :lf))
 
 (defun start (&optional (db *data-db*))
-  (when (stringp db) (setf db (fsdb:make-fsdb db)))
-  (with-site-db (db)
-    (let ((port (or (get-setting :port) (error "No port setting"))))
-      (when (get-port-acceptor port)
-        (error "Hunchentoot already started"))
-      (prog1
-          (setf hunchentoot:*show-lisp-errors-p* t)
-        (setf (get-port-acceptor port)
-              (hunchentoot:start
-               (make-instance 'lisplog-acceptor :port port)))
-        (setf (get-port-db port) db)))))
+  (when db
+    (when (stringp db) (setf db (fsdb:make-fsdb db)))
+    (with-site-db (db)
+      (let ((port (or (get-setting :port) (error "No port setting"))))
+        (when (get-port-acceptor port)
+          (error "Hunchentoot already started"))
+        (prog1
+            (setf hunchentoot:*show-lisp-errors-p* t)
+          (setf (get-port-acceptor port)
+                (hunchentoot:start
+                 (make-instance 'lisplog-acceptor :port port)))
+          (setf (get-port-db port) db))))))
 
 (defun stop (&key port (db *data-db*))
   (unless port

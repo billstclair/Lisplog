@@ -19,7 +19,8 @@
   :license "Apache"
   :depends-on (fsdb cl-crypto           ;local
                md5 anaphora html-template cl-fad cl-ppcre
-               split-sequence bordeaux-threads hunchentoot)
+               split-sequence bordeaux-threads hunchentoot
+               eager-future)
   :components
   ((:module src
     :serial t
@@ -35,6 +36,7 @@
      (:file "csv")
      (:file "sessions")
      (:file "captcha")
+     (:file "taskmaster")
      (:file "webserver")
      ))))
 

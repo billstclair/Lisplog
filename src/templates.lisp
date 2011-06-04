@@ -50,7 +50,7 @@
 (defun get-style-file (file &optional (db *data-db*))
   (with-settings (db)
     (let ((style (get-setting :style)))
-      (or (fsdb:db-get *styles-db* style file)
+      (or (and style (fsdb:db-get *styles-db* style file))
           (fsdb:db-get *styles-db* $DEFAULT file)
           (error "No index template for style: ~s" style)))))
 

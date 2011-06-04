@@ -144,7 +144,9 @@
 
 (defclass lisplog-acceptor (hunchentoot:acceptor)
   ()
-  (:default-initargs :request-class 'lisplog-request))
+  (:default-initargs
+   :request-class 'lisplog-request
+   :taskmaster (make-instance 'limited-thread-taskmaster)))
 
 (defun start-session ()
   (or (hunchentoot:session hunchentoot:*request*)
