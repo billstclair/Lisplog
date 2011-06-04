@@ -9,12 +9,17 @@
 
 (defparameter *hunchentoot-worker-thread-limit* 10)
 
+(defvar *eager-future-pool* nil)
+
+(defun eager-future-pool ()
+  (or *eager-future-pool*
+      (let ((pool (make-instance 'eager-future:fixed-fifo-thread-pool)))
+        (setf (eager-future:thread-limit pool)
+              *hunchentoot-worker-thread-limit*)
+        (setf *eager-future-pool* pool))))
+
 (defclass limited-thread-taskmaster (hunchentoot:one-thread-per-connection-taskmaster)
-  ((thread-pool :initform
-                (let ((pool (make-instance 'eager-future:fixed-fifo-thread-pool)))
-                  (setf (eager-future:thread-limit pool)
-                        *hunchentoot-worker-thread-limit*)
-                  pool)
+  ((thread-pool :initform (eager-future-pool)
                 :accessor thread-pool-of)))
 
 (defmethod hunchentoot:handle-incoming-connection
