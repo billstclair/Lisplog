@@ -1,7 +1,12 @@
 Dynamic server
 ==============
 
-Go LIVE!
+http://billstclair.com/blog/bloodshed.html
+  Category links broken here.
+  Something wrong with category addition/change
+
+Fix posts that have no known format. Seems most of them should be "Raw HTML".
+E.g. stories/ vin/ (fixed on live site, but not on PC).
 
 blogroll
 banners page

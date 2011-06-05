@@ -400,10 +400,12 @@
 (defconstant $filtered-html-format 1)
 (defconstant $full-html-format 3)
 (defconstant $raw-html-format 5)
+(defconstant $old-raw-html-format 6)
 
 ;; This deals with [quote]...[/quote] from Drupal
 (defun drupal-format-node (plist &optional format)
-  (unless (eql format $raw-html-format)
+  (unless (or (eql format $raw-html-format)
+              (eql format $old-raw-html-format))
     (let ((body (getf plist :body))
           (teaser (getf plist :teaser)))
       (when body

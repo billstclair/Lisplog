@@ -263,7 +263,9 @@
 (defun node-format-to-edit-post-plist (format)
   (cond ((eql format $filtered-html-format) '(:filtered-html t))
         ((eql format $full-html-format) '(:full-html t))
-        ((eql format $raw-html-format) '(:raw-html t))))
+        ((or (eql format $raw-html-format)
+             (eql format $old-raw-html-format))
+         '(:raw-html t))))
 
 (defparameter *format-name-to-number-alist*
   `(("filtered-html" . ,$filtered-html-format)
