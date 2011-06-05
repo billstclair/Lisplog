@@ -38,6 +38,9 @@
 ;;; Accessing styles and site files
 ;;;
 
+;; Bound during template operations
+(defvar *settings* nil)
+
 (defmacro with-settings ((&optional data-db) &body body)
   (let ((thunk (gensym "THUNK")))
     `(flet ((,thunk (*settings*) ,@body))
@@ -73,9 +76,6 @@
 ;;;
 ;;; Settings
 ;;;
-
-;; Bound during template operations
-(defvar *settings* nil)
 
 (defun get-setting (key &optional (settings *settings*))
   (getf settings key))
