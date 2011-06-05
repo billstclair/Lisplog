@@ -24,19 +24,27 @@
 (defmethod hunchentoot:handle-incoming-connection
     ((taskmaster limited-thread-taskmaster) socket)
   (let ((eager-future:*thread-pool* (thread-pool-of taskmaster)))
-    (eager-future:pexec
-      (let ((thread (bt:current-thread)))
-        (declare (ignorable thread))
-        #+ccl
-        (setf (ccl:process-name thread)
-              (format nil "Hunchentoot worker \(client: ~A)"
-                      (hunchentoot::client-as-string socket)))
-        (unwind-protect
-             (hunchentoot:process-connection
-              (hunchentoot:taskmaster-acceptor taskmaster)
-              socket)
-          #+ccl
-          (setf (ccl:process-name thread) "Hunchentoot worker (idle)"))))))
+    (hunchentoot::handler-case*
+     (eager-future:pexec
+       (let ((thread (bt:current-thread)))
+         (declare (ignorable thread))
+         #+ccl
+         (setf (ccl:process-name thread)
+               (format nil "Hunchentoot worker \(client: ~A)"
+                       (hunchentoot::client-as-string socket)))
+         (unwind-protect
+              (hunchentoot:process-connection
+               (hunchentoot:taskmaster-acceptor taskmaster)
+               socket)
+           #+ccl
+           (setf (ccl:process-name thread) "Hunchentoot worker (idle)"))))
+     (error (cond)
+       ;; need to bind *ACCEPTOR* so that LOG-MESSAGE can do its work.
+       (let ((hunchentoot:*acceptor* (hunchentoot:taskmaster-acceptor taskmaster)))
+         (hunchentoot:log-message
+          hunchentoot:*lisp-errors-log-level*
+          "Error while scheduling new incoming connection: ~A"
+          cond))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
