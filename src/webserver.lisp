@@ -859,7 +859,7 @@
     (when (blankp email) (setf email nil))
     (when (blankp homepage) (setf homepage nil))
     (unless user
-      (unless (blankp captcha-response)
+      (unless (and preview (blankp captcha-response))
         (multiple-value-bind (ok reason)
             (validate-captcha captcha-response captcha-hidden)
           (unless ok
