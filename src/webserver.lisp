@@ -799,8 +799,12 @@
                      (getf comment :format) format
                      (getf comment :homepage) homepage)))
       (setf (read-comment cid data-db) comment)
-      (unless (eql 0 status)
-        (pushnew cid (unmoderated-comment-numbers data-db)))
+      (cond ((eql 0 status)
+             (let ((numbers (unmoderated-comment-numbers data-db)))
+               (when (member cid numbers)
+                 (setf (unmoderated-comment-numbers data-db)
+                       (delete cid numbers)))))
+            (t (pushnew cid (unmoderated-comment-numbers data-db))))
       (render-node node :data-db data-db :site-db site-db)
       ;; Don't always have to do this, but figuring out when
       ;; is harder than just doing it.

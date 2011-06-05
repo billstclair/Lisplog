@@ -1,6 +1,7 @@
 #!/bin/bash
 # Usage is: "lisplog [slimeport] [http_port]"
-ccl -e '(load "start.lisp")' \
+ccl -R 200M \
+    -e '(load "start.lisp")' \
     -e '(in-package :ll)' \
     -e "(start-swank $1)" \
     -e "(start $2)"
