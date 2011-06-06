@@ -1,13 +1,14 @@
 Dynamic server
 ==============
 
-Month page entry for today not sorted correctly after new post.
-
 blogroll
 banners page
 Update FAQ
 
 Registration and user settings editor.
+
+"Hold" column ("H") on Comments Moderation page. Let users moderate their own
+unpublished comments.
 
 [quote person]
 ctrl-shift-Q javascript to enter blockquote
