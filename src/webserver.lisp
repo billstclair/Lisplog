@@ -13,8 +13,16 @@
        (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
          ,@body))))
 
-(setf hunchentoot:*hunchentoot-default-external-format*
-      (flexi-streams:make-external-format :utf8 :eol-style :lf))
+;; Character encoding is actually a little wierd.
+;; We're displaying as UTF-8, and the browser sends forms
+;; to us encoded as UTF-8, but we receive latin-1
+;; (see hunchentoot:*hunchentoot-default-external-format*),
+;; and we read/write latin-1 from/to files (fsdb::file-get/put-contents).
+;; Same sequence of bytes, but stored internally as latin-1.
+;; It's actually less pain that way. Slime doesn't handle
+;; UTF-8 over the wire.
+(setf hunchentoot:*default-content-type*
+      "text/html; charset=utf-8")
 
 (defun start (&optional (db *data-db*))
   (when db

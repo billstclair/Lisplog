@@ -3,9 +3,10 @@ Dynamic server
 
 blogroll
 banners page
-Update FAQ
 
 Registration and user settings editor.
+
+Categories page, linked from the category name on each post, containing the last 10 posts in each category. Add to RSS feed.
 
 "Hold" column ("H") on Comments Moderation page. Let users moderate their own
 unpublished comments.

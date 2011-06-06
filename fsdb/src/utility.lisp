@@ -10,7 +10,8 @@
 (defun file-get-contents (file)
   (with-open-file (stream file
                           :if-does-not-exist nil
-                          :external-format :utf-8)
+                          ;;:external-format :utf-8
+                          )
     (when stream
       (let* ((len (file-length stream))
              (s (make-string len)))
@@ -22,7 +23,8 @@
                           :direction :output
                           :if-exists :supersede
                           :if-does-not-exist :create
-                          :external-format :utf-8)
+                          ;;:external-format :utf-8
+                          )
     (write-sequence contents stream)
     contents))
 
