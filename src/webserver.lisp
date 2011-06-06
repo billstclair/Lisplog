@@ -484,6 +484,8 @@
      with cat-neighbors = (getf node :cat-neighbors)
      for (cat (prev . next)) on cat-neighbors by #'cddr
      do
+       (setf (read-catnodes cat data-db)
+             (delete nid (read-catnodes cat data-db)))
        (unless (or (eql prev nid) (eql next nid))
          (let* ((prev-node (read-node prev data-db))
                 (prev.next (getf (getf prev-node :cat-neighbors) cat)))
@@ -540,7 +542,9 @@
                               :body body
                               :format format)
                    alias new-alias
-                   new-alias-p t))
+                   new-alias-p t)
+             ;; So that the node exists when update-node-categories is called
+             (setf (read-node nid data-db) node))
             (t (setf (getf node :changed) now)
                (let ((aliases (getf node :aliases)))
                  (unless (string= new-alias (car aliases))
@@ -560,18 +564,18 @@
                (setf (getf node :changed) now
                      (getf node :promote) promote
                      (getf node :body) body
-                     (getf node :format) format)
-               (let ((old-categories
-                      (loop for (cat) on (getf node :cat-neighbors) by #'cddr
-                         collect cat)))
-                 (unless (and (eql (length old-categories)
-                                   (length categories))
-                              (eql (length old-categories)
-                                   (length (union categories old-categories))))
-                   (setf node (update-node-categories
-                               node categories old-categories
-                               :data-db data-db
-                               :site-db site-db))))))
+                     (getf node :format) format)))
+      (let ((old-categories
+             (loop for (cat) on (getf node :cat-neighbors) by #'cddr
+                collect cat)))
+        (unless (and (eql (length old-categories)
+                          (length categories))
+                     (eql (length old-categories)
+                          (length (union categories old-categories))))
+          (setf node (update-node-categories
+                      node categories old-categories
+                      :data-db data-db
+                      :site-db site-db))))
       (setf (read-node nid data-db) node)
       (cond (delete-aliases-p
              (remove-node-from-site node :data-db data-db :site-db site-db)

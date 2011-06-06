@@ -21,10 +21,11 @@
   (let ((str (apply #'fsdb:db-get db (node-path file dir subdirs-p))))
     (and str (read-from-string str))))
 
-(defun (setf sexp-get) (alist db dir file &key (subdirs-p t))
+(defun (setf sexp-get) (sexp db dir file &key (subdirs-p t))
   (let ((key (apply #'fsdb:append-db-keys (node-path file dir subdirs-p))))
     (setf (fsdb:db-get db key)
-          (and alist (with-output-to-string (s) (pprint alist s))))))
+          (and sexp (with-output-to-string (s) (pprint sexp s))))
+    sexp))
 
 (defun sexp-probe (db dir file &key (subdirs-p t))
   (apply #'fsdb:db-probe db (node-path file dir subdirs-p)))
