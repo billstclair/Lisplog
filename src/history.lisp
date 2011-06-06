@@ -275,7 +275,7 @@ as integers."
 
 (defun get-day-alist (year month &optional (db *data-db*))
   (let ((infos (get-month-post-info
-                year month :sort-predicate #'< :db db))
+                year month :sort-predicate #'> :db db))
         (day-alist nil))
     (loop for info in infos
        do
