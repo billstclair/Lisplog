@@ -179,8 +179,7 @@
     uri))
 
 (defun login (query-string username password uri https)
-  (let* ((session (start-session))
-         (db (get-port-db))
+  (let* ((db (get-port-db))
          (user (get-user-by-name username db)))
     (cond ((not (and user
                      (equal (md5 password) (getf user :pass))))
@@ -188,9 +187,10 @@
                          :errmsg "Unknown user or wrong password"
                          :username username
                          :query-string query-string))
-          (t (setf (uid-of session) (getf user :uid))
-             (write-session session db)
-             (hunchentoot:redirect (login-redirect-uri query-string))))))
+          (t (let ((session (start-session)))
+               (setf (uid-of session) (getf user :uid))
+               (write-session session db)
+               (hunchentoot:redirect (login-redirect-uri query-string)))))))
 
 ;;;
 ;;; Implementation of URL handlers
