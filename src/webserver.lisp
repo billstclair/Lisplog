@@ -153,11 +153,14 @@
         (let ((plist (list :username username
                            :errmsg errmsg
                            :hidden-values `((:name "query-string"
-                                                   :value ,query-string)))))
+                                                   :value ,query-string))))
+              (*block-nums-key* :index-block-nums))
           (multiple-value-bind (base home) (compute-base-and-home uri https)
             (setf (getf plist :home) home
                   (getf plist :base) base))
-          (render-template ".login.tmpl" plist :data-db db))))))
+          (render-template ".login.tmpl" plist
+                           :add-index-comment-links-p t
+                           :data-db db))))))
 
 (defun login-redirect-uri (query-string)
   (let* ((params (hunchentoot::form-url-encoded-list-to-alist
@@ -241,8 +244,11 @@
          (plist (list :home ".."
                       :title "Error"
                       :errnum errnum
-                      :errmsg errmsg)))
-    (render-template ".error.tmpl" plist :data-db db)))
+                      :errmsg errmsg))
+         (*block-nums-key* :index-block-nums))
+    (render-template ".error.tmpl" plist
+                     :add-index-comment-links-p t
+                     :data-db db)))
 
 ;; <baseurl>/admin/?node=<node-num>
 (defun render-web-node (node-num uri https &key alias (data-db (get-port-db)))
@@ -250,7 +256,8 @@
     (return-from render-web-node (not-found)))
   (with-settings (data-db)
     (let* ((plist (make-node-plist node-num :unpublished-p t :data-db data-db))
-           (post-template-name (get-post-template-name data-db)))
+           (post-template-name (get-post-template-name data-db))
+           (*block-nums-key* :index-block-nums))
       (when plist
         (unless alias
           (setf alias (car (getf plist :aliases))))
@@ -261,7 +268,9 @@
           (setf (getf plist :home) home
                 (getf plist :base) base
                 (getf plist :permalink) alias))
-        (render-template post-template-name plist :data-db data-db)))))
+        (render-template post-template-name plist
+                         :add-index-comment-links-p t
+                         :data-db data-db)))))
 
 (defun redirect-uri (uri https)
   (if uri
@@ -398,6 +407,7 @@
          (status (if node (getf node :status) 1))
          (body (getf node :body))
          (format (if node (getf node :format) 1))
+         (*block-nums-key* :index-block-nums)
          plist)
     (when (and node-num (not node))
       (return-from edit-post
@@ -424,7 +434,9 @@
                          :body (efh body)
                          :category-rows (node-to-edit-post-category-rows node db)
                          (node-format-to-edit-post-plist format))))
-    (render-template ".edit-post.tmpl" plist :data-db db)))
+    (render-template ".edit-post.tmpl" plist
+                     :add-index-comment-links-p t
+                     :data-db db)))
 
 (defvar *node-save-lock*
   (bt:make-recursive-lock "*node-save-lock*"))
@@ -614,6 +626,7 @@
                              (hunchentoot::compute-parameter
                               "categories" 'list :both)))
          (format (node-format-name-to-number input-format))
+         (*block-nums-key* :index-block-nums)
          (errmsg nil)
          plist)
     (cond ((blankp title)
@@ -669,7 +682,9 @@
                  (setf node-plist (list :posts (list node-plist)))
                  (setf (getf plist :preview)
                        (fill-and-print-to-string template node-plist)))))
-           (render-template ".edit-post.tmpl" plist :data-db db))
+           (render-template ".edit-post.tmpl" plist
+                            :add-index-comment-links-p t
+                            :data-db db))
           (submit
            (setf alias
                  (save-updated-node node
@@ -723,6 +738,7 @@
          (email (getf comment :mail))
          (homepage (getf comment :homepage))
          (status (getf comment :status))
+         (*block-nums-key* :index-block-nums)
          captcha-explanation captcha-query captcha-response-size captcha-hidden)
     (when (and (blankp author) user)
       (setf author (getf user :name)))
@@ -764,7 +780,9 @@
                           :captcha-response-size captcha-response-size
                           :captcha-hidden captcha-hidden
                           (node-format-to-edit-post-plist format))))
-        (render-template ".edit-comment.tmpl" plist :data-db db)))))
+        (render-template ".edit-comment.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db db)))))
 
 (defun save-updated-comment (comment &key
                              (data-db *data-db*)
@@ -849,6 +867,7 @@
                      (node-format-name-to-number input-format)
                      1))                ;filtered-html for non-admin commentor
          (errmsg nil)
+         (*block-nums-key* :index-block-nums)
          captcha-explanation captcha-query captcha-response-size
          plist)
     (when comment
@@ -935,7 +954,9 @@
                              :permalink (and alias (efh alias)))))
                  (setf (getf plist :preview)
                        (fill-and-print-to-string template comment-plist)))))
-           (render-template ".edit-comment.tmpl" plist :data-db db))
+           (render-template ".edit-comment.tmpl" plist
+                            :add-index-comment-links-p t
+                            :data-db db))
           (submit
            (multiple-value-bind (cid alias)
                (save-updated-comment comment
@@ -980,6 +1001,7 @@
          (uid (uid-of session))
          (user (read-user uid db))
          (admin-p (memq :admin (getf user :permissions)))
+         (*block-nums-key* :index-block-nums)
          plist)
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (cond ((hunchentoot:parameter "logout")
@@ -988,7 +1010,9 @@
       (setf plist (list :home home
                         :base base
                         :admin-p admin-p))
-      (render-template ".settings.tmpl" plist :data-db db))))
+      (render-template ".settings.tmpl" plist
+                       :add-index-comment-links-p t
+                       :data-db db))))
 
 ;; <baseurl>/admin/moderate
 (defun moderate (uri https)
@@ -1033,6 +1057,7 @@
          (uid (uid-of session))
          (user (read-user uid db))
          (admin-p (memq :admin (getf user :permissions)))
+         (*block-nums-key* :index-block-nums)
          comment-numbers comments plist)
     (unless admin-p
       (return-from submit-moderate
@@ -1080,7 +1105,9 @@
       (setf plist (list :home home
                         :base base
                         :comments comments))
-      (render-template ".moderate-comments.tmpl" plist :data-db db))))
+      (render-template ".moderate-comments.tmpl" plist
+                       :add-index-comment-links-p t
+                       :data-db db))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

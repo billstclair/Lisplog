@@ -453,7 +453,11 @@
 
 (defun render-template (template-name plist &key
                         month year
+                        add-index-comment-links-p
                         (data-db *data-db*) index-template-name)
+  (when add-index-comment-links-p
+    (setf (getf plist :recent-comments)
+          (get-comment-plists-for-index-page data-db)))
   (with-settings ()
     (let* ((template (get-style-file template-name data-db))
            (index-template
@@ -648,11 +652,11 @@
            (plist `(:posts ,node-plists ,@my-links))
            (post-template-name (get-post-template-name data-db))
            (file-name "index.html"))
-      (setf (getf plist :recent-comments)
-            (get-comment-plists-for-index-page data-db))
       (setf (getf plist :home) ".")
       (setf (fsdb:db-get site-db file-name)
-            (render-template post-template-name plist :data-db data-db))
+            (render-template post-template-name plist
+                             :add-index-comment-links-p t
+                             :data-db data-db))
       (render-rss :data-db data-db :site-db site-db :node-plists node-plists)
       file-name)))
 
