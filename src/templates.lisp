@@ -460,6 +460,9 @@
           (get-comment-plists-for-index-page data-db)))
   (with-settings ()
     (let* ((template (get-style-file template-name data-db))
+           (*block-nums-key* (if add-index-comment-links-p
+                                 :index-block-nums
+                                 *block-nums-key*))
            (index-template
             (get-style-file (or index-template-name *style-index-file*) data-db)))
       (unless (getf plist :home) (setf (getf plist :home) "."))
@@ -644,8 +647,7 @@
 
 (defun render-site-index (&key (data-db *data-db*) (site-db *site-db*))
   (with-settings (data-db)
-    (let* ((*block-nums-key* :index-block-nums)
-           (node-plists (get-node-plists-for-index-page data-db))
+    (let* ((node-plists (get-node-plists-for-index-page data-db))
            (my-links (multiple-value-bind (y m)
                          (decode-ymd (getf (car node-plists) :created))
                        (compute-months-and-years-link-plist y m data-db)))

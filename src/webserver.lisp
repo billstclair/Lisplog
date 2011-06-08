@@ -153,8 +153,7 @@
         (let ((plist (list :username username
                            :errmsg errmsg
                            :hidden-values `((:name "query-string"
-                                                   :value ,query-string))))
-              (*block-nums-key* :index-block-nums))
+                                                   :value ,query-string)))))
           (multiple-value-bind (base home) (compute-base-and-home uri https)
             (setf (getf plist :home) home
                   (getf plist :base) base))
@@ -244,8 +243,7 @@
          (plist (list :home ".."
                       :title "Error"
                       :errnum errnum
-                      :errmsg errmsg))
-         (*block-nums-key* :index-block-nums))
+                      :errmsg errmsg)))
     (render-template ".error.tmpl" plist
                      :add-index-comment-links-p t
                      :data-db db)))
@@ -256,8 +254,7 @@
     (return-from render-web-node (not-found)))
   (with-settings (data-db)
     (let* ((plist (make-node-plist node-num :unpublished-p t :data-db data-db))
-           (post-template-name (get-post-template-name data-db))
-           (*block-nums-key* :index-block-nums))
+           (post-template-name (get-post-template-name data-db)))
       (when plist
         (unless alias
           (setf alias (car (getf plist :aliases))))
@@ -407,7 +404,6 @@
          (status (if node (getf node :status) 1))
          (body (getf node :body))
          (format (if node (getf node :format) 1))
-         (*block-nums-key* :index-block-nums)
          plist)
     (when (and node-num (not node))
       (return-from edit-post
@@ -626,7 +622,6 @@
                              (hunchentoot::compute-parameter
                               "categories" 'list :both)))
          (format (node-format-name-to-number input-format))
-         (*block-nums-key* :index-block-nums)
          (errmsg nil)
          plist)
     (cond ((blankp title)
@@ -738,7 +733,6 @@
          (email (getf comment :mail))
          (homepage (getf comment :homepage))
          (status (getf comment :status))
-         (*block-nums-key* :index-block-nums)
          captcha-explanation captcha-query captcha-response-size captcha-hidden)
     (when (and (blankp author) user)
       (setf author (getf user :name)))
@@ -867,7 +861,6 @@
                      (node-format-name-to-number input-format)
                      1))                ;filtered-html for non-admin commentor
          (errmsg nil)
-         (*block-nums-key* :index-block-nums)
          captcha-explanation captcha-query captcha-response-size
          plist)
     (when comment
@@ -953,10 +946,10 @@
                              :home home
                              :permalink (and alias (efh alias)))))
                  (setf (getf plist :preview)
-                       (fill-and-print-to-string template comment-plist)))))
-           (render-template ".edit-comment.tmpl" plist
-                            :add-index-comment-links-p t
-                            :data-db db))
+                       (fill-and-print-to-string template comment-plist))
+                 (render-template ".edit-comment.tmpl" plist
+                                  :add-index-comment-links-p t
+                                  :data-db db)))))
           (submit
            (multiple-value-bind (cid alias)
                (save-updated-comment comment
@@ -1001,7 +994,6 @@
          (uid (uid-of session))
          (user (read-user uid db))
          (admin-p (memq :admin (getf user :permissions)))
-         (*block-nums-key* :index-block-nums)
          plist)
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (cond ((hunchentoot:parameter "logout")
@@ -1057,7 +1049,6 @@
          (uid (uid-of session))
          (user (read-user uid db))
          (admin-p (memq :admin (getf user :permissions)))
-         (*block-nums-key* :index-block-nums)
          comment-numbers comments plist)
     (unless admin-p
       (return-from submit-moderate
