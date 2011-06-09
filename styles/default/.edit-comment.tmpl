@@ -74,7 +74,7 @@ Preview:
       <legend>Captcha</legend>
       <!-- TMPL_VAR captcha-explanation --><br/>
       <!-- TMPL_VAR captcha-query -->
-      <input type="text" name="captcha-response" size="<!-- TMPL_VAR captcha-response-size -->" value="<!-- TMPL_VAR captcha-response -->"/>
+      <input type="text" name="captcha-response" size="<!-- TMPL_VAR captcha-response-size -->" value="<!-- TMPL_VAR captcha-response -->" autocomplete="off"/>
     </fieldset><!-- TMPL_ELSE -->
     <input type="hidden" name="captcha-response" value="<!-- TMPL_VAR captcha-response -->"/><!-- /TMPL_IF -->
     <input type="hidden" name="captcha-hidden" value="<!-- TMPL_VAR captcha-hidden -->"/><!-- /TMPL_IF -->
