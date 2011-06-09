@@ -964,8 +964,16 @@
                                      :name author
                                      :mail email
                                      :homepage homepage)
-             (let ((base (compute-base-and-home uri https)))
-               (hunchentoot:redirect (format nil "~a~a#comment-~a" base alias cid)))))
+             (multiple-value-bind (base home) (compute-base-and-home uri https)
+               (cond ((eql 0 status)
+                      (hunchentoot:redirect
+                       (format nil "~a~a#comment-~a" base alias cid)))
+                     (t (let ((plist (list :base base
+                                           :home home
+                                           :alias alias)))
+                          (render-template ".comment-submitted.tmpl" plist
+                                           :add-index-comment-links-p t
+                                           :data-db db)))))))
           (delete
            (when (blankp comment-num)
              (return-from submit-comment

@@ -1,15 +1,20 @@
 Dynamic server
 ==============
 
-blogroll
-banners page
+If http:// is left off of a home page in a comment, add it.
 
 Registration and user settings editor.
+
+Make user id in login page case insensitive.
 
 Categories page, linked from the category name on each post, containing the last 10 posts in each category. Add to RSS feed.
 
 "Hold" column ("H") on Comments Moderation page. Let users moderate their own
 unpublished comments.
+
+Threads page, accessible from Settings.
+  Id: ccl:process-serial-number, Name: bt:thread-name, Status: ccl:process-whostate
+  Sort by Id descending, or Name
 
 [quote person]
 ctrl-shift-Q javascript to enter blockquote
