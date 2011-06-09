@@ -869,7 +869,7 @@
     (cond ((blankp author)
            (setf errmsg "Name may not be blank"))
           ((blankp body)
-           (setf errmsg "Body may not be blank")
+           (setf errmsg "Comment may not be blank")
            (when comment
              (setf body (getf comment :comment)))))
     (when (blankp title)
@@ -889,7 +889,7 @@
     (when (blankp email) (setf email nil))
     (when (blankp homepage) (setf homepage nil))
     (unless user
-      (unless (and preview (blankp captcha-response))
+      (unless (or errmsg (and preview (blankp captcha-response)))
         (multiple-value-bind (ok reason)
             (validate-captcha captcha-response captcha-hidden)
           (unless ok
@@ -931,25 +931,24 @@
                           :captcha-response captcha-response
                           :captcha-hidden captcha-hidden
                           (node-format-to-edit-post-plist format)))
-             (when preview
-               (let* ((template-name (get-comment-template-name db))
-                      (template (get-style-file template-name db))
-                      (node (and node-num (read-node node-num db)))
-                      (alias (car (getf node :aliases)))
-                      (comment-plist
-                       (list :cid comment-num
-                             :subject title
-                             :name author
-                             :homepage homepage
-                             :post-date post-time
-                             :comment (drupal-format body format)
-                             :home home
-                             :permalink (and alias (efh alias)))))
-                 (setf (getf plist :preview)
-                       (fill-and-print-to-string template comment-plist))
-                 (render-template ".edit-comment.tmpl" plist
-                                  :add-index-comment-links-p t
-                                  :data-db db)))))
+             (let* ((template-name (get-comment-template-name db))
+                    (template (get-style-file template-name db))
+                    (node (and node-num (read-node node-num db)))
+                    (alias (car (getf node :aliases)))
+                    (comment-plist
+                     (list :cid comment-num
+                           :subject title
+                           :name author
+                           :homepage homepage
+                           :post-date post-time
+                           :comment (drupal-format body format)
+                           :home home
+                           :permalink (and alias (efh alias)))))
+               (setf (getf plist :preview)
+                     (fill-and-print-to-string template comment-plist))
+               (render-template ".edit-comment.tmpl" plist
+                                :add-index-comment-links-p t
+                                :data-db db))))
           (submit
            (multiple-value-bind (cid alias)
                (save-updated-comment comment
