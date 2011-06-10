@@ -1033,6 +1033,8 @@
       (let ((plist (list :home home
                          :base base
                          :threads threads
+                         :room (with-output-to-string (*standard-output*)
+                                 (room t))
                          :index-p #+ccl t #-ccl nil
                          :status-p #+ccl t #-ccl nil)))
         (render-template ".threads.tmpl" plist
