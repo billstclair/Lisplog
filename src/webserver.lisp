@@ -77,6 +77,11 @@
   (or (login-screen uri https)
       (settings uri https)))
 
+;; <baseurl>/admin/threads
+(hunchentoot:define-easy-handler (handle-threads :uri "/threads") (uri https)
+  (or (login-screen uri https)
+      (threads uri https)))
+
 ;; <baseurl>/admin/add_post
 (hunchentoot:define-easy-handler (handle-add-post :uri "/add_post") (uri https)
   (or (login-screen uri https)
@@ -1012,6 +1017,27 @@
       (render-template ".settings.tmpl" plist
                        :add-index-comment-links-p t
                        :data-db db))))
+
+(defun threads (uri https)
+  (let ((threads (bt:all-threads)))
+    (setf threads
+          #+ccl (sort threads #'> :key #'ccl:process-serial-number)
+          #-ccl (sort threads #'string-lessp :key #'bt:thread-name))
+    (loop for tail on threads
+       for thread = (car tail)
+       for serial = #+ccl (ccl:process-serial-number thread) #-ccl nil
+       for name = (bt:thread-name thread)
+       for whostate = #+ccl (ccl:process-whostate thread) #-ccl nil
+       do (setf (car tail) (list :index serial :name name :status whostate)))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (let ((plist (list :home home
+                         :base base
+                         :threads threads
+                         :index-p #+ccl t #-ccl nil
+                         :status-p #+ccl t #-ccl nil)))
+        (render-template ".threads.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db (get-port-db))))))
 
 ;; <baseurl>/admin/moderate
 (defun moderate (uri https)

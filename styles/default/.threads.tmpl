@@ -1,0 +1,14 @@
+<h2 class="content-title">Threads</h2>
+<br/>
+<table class="prettytable">
+  <tr><!-- TMPL_IF index-p -->
+    <th>Id</th><!-- /TMPL_IF -->
+    <th>Name</th><!-- TMPL_IF status-p -->
+    <th>Status</th><!-- /TMPL_IF -->
+  </tr><!-- TMPL_LOOP threads -->
+  <tr><!-- TMPL_IF index-p -->
+    <td><!-- TMPL_VAR index --></td><!-- /TMPL_IF -->
+    <td><!-- TMPL_VAR name --></td><!-- TMPL_IF status-p -->
+    <td><!-- TMPL_VAR status --></td><!-- /TMPL_IF  -->
+  </tr><!-- /TMPL_LOOP -->
+</table>
