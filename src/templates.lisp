@@ -141,6 +141,9 @@
 (defun (setf read-user) (plist user-num &optional (db *data-db*))
   (setf (sexp-get db $USERS user-num) plist))
 
+(defun probe-user (uid &optional (db *data-db*))
+  (sexp-probe db $USERS uid))
+
 (defun read-nid (&optional (db *data-db*))
   (let ((nid-string (fsdb:db-get db $COUNTERS $NID))
         nid)
@@ -190,6 +193,31 @@
        (unless (probe-comment cid db) (return))
        (incf cid))
     (setf (read-cid db) cid)))
+
+(defun read-uid (&optional (db *data-db*))
+  (let ((uid-string (fsdb:db-get db $COUNTERS $UID))
+        uid)
+    (cond (uid-string (setf uid (parse-integer uid-string)))
+          (t
+           (let ((max-uid 0))
+             (do-users (user db)
+               (let ((uid (getf user :uid)))
+                 (when (and uid (> uid max-uid))
+                   (setf max-uid uid))))
+             (setf uid max-uid
+                   (read-uid db) uid))))
+    uid))
+
+(defun (setf read-uid) (uid &optional (db *data-db*))
+  (setf (fsdb:db-get db $COUNTERS $UID) (princ-to-string uid))
+  uid)
+
+(defun allocate-uid (&optional (db *data-db*))
+  (let ((uid (read-uid db)))
+    (loop
+       (unless (probe-user uid db) (return))
+       (incf uid))
+    (setf (read-uid db) uid)))
 
 (defun user-permission-p (user-num permission &optional (db *data-db*))
   (not (null (memq permission (getf (read-user user-num db) :permissions)))))
@@ -446,8 +474,9 @@
        (setf (getf plist :comment) text
              (getf plist :post-date)
              (unix-time-to-rfc-1123-string (getf plist :timestamp)))
-       (when (blankp (getf plist :homepage))
-         (setf (getf plist :homepage) nil))
+       (cond ((blankp (getf plist :homepage))
+              (setf (getf plist :homepage) nil))
+             (t (setf (getf plist :homepage) (efh (getf plist :homepage)))))
      unless unapproved-p
      collect plist))
 

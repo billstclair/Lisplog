@@ -1,0 +1,35 @@
+<h2 class="content-title">Edit Profile</h2>
+<div class="profile"><!-- TMPL_IF errmsg -->
+  <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF --><!-- TMPL_IF new-user-p -->
+  <p>To complete your registration, enter your password twice, enter your home page if you want to, and press the "Submit" button.</p><!-- /TMPL_IF -->
+  <form action="admin/profile" method="post"><!-- TMPL_IF verify -->
+    <input type="hidden" name="verify" value="<!-- TMPL_VAR verify -->"/><!-- /TMPL_IF -->
+    <table>
+      <tr>
+        <th>Username:</th>
+        <td><!-- TMPL_VAR username --></td>
+      </tr><tr>
+        <th>Email:</th>
+        <td><input type="text" name="email" size="40" value="<!-- TMPL_VAR email -->"/></td>
+      </tr><tr>
+        <th>Home page:</th>
+        <td><input type="text" name="homepage" size="40" value="<!-- TMPL_VAR homepage -->"/></td>
+      </tr><tr><!-- TMPL_IF new-user-p --><!-- TMPL_ELSE -->
+        <td colspan="2">
+          <p>To change your password, enter your old password and enter your new password twice.</p>
+        </td>
+      </tr><tr>
+        <th>Old password:</th>
+        <td><input type="password" name="oldpass" size="40"/></td>
+      </tr><tr><!-- /TMPL_IF --><!-- TMPL_IF new-user-p -->
+        <th>Password:</th><!-- TMPL_ELSE -->
+        <th>New password:</th><!-- /TMPL_IF  -->
+        <td><input type="password" name="newpass" size="40"/></td>
+      </tr><tr>
+        <th>Repeat:</th>
+        <td><input type="password" name="newpass2" size="40"/></td>
+      </tr>
+    </table>
+    <input type="submit" name="submit" value="Submit"/>
+  </form>
+</div>

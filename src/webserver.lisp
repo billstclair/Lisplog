@@ -141,6 +141,28 @@
   (or (login-screen uri https)
       (submit-moderate uri https :submit submit)))
 
+(hunchentoot:define-easy-handler (handle-register :uri "/register")
+    (uri https submit username email captcha-response captcha-hidden verify)
+  (register uri https
+            :submit submit
+            :username username
+            :email email
+            :captcha-response captcha-response
+            :captcha-hidden captcha-hidden
+            :verify verify))
+
+(hunchentoot:define-easy-handler (handle-profile :uri "/profile")
+    (uri https verify oldpass newpass newpass2 email homepage submit)
+  (or (and (not verify) (login-screen uri https))
+      (profile uri https
+               :verify verify
+               :oldpass oldpass
+               :newpass newpass
+               :newpass2 newpass2
+               :email email
+               :homepage homepage
+               :submit submit)))
+
 ;;;
 ;;; Login and registration
 ;;;
@@ -185,6 +207,12 @@
               first nil)))
     uri))
 
+(defun make-new-session (uid &optional (db *data-db*))
+  (let ((session (start-session)))
+    (setf (uid-of session) uid)
+    (write-session session db)
+    session))
+
 (defun login (query-string username password uri https)
   (let* ((db (get-port-db))
          (user (get-user-by-name username db)))
@@ -194,10 +222,233 @@
                          :errmsg "Unknown user or wrong password"
                          :username username
                          :query-string query-string))
-          (t (let ((session (start-session)))
-               (setf (uid-of session) (getf user :uid))
-               (write-session session db)
-               (hunchentoot:redirect (login-redirect-uri query-string)))))))
+          (t (make-new-session (getf user :uid))
+             (hunchentoot:redirect (login-redirect-uri query-string))))))
+
+(defconstant $no-post-permission 1)
+(defconstant $unknown-post-number 2)
+(defconstant $no-add-or-edit-permission 3)
+(defconstant $cant-delete 4)
+(defconstant $no-edit-comment-permission 5)
+(defconstant $unknown-comment-number 6)
+(defconstant $name-may-not-be-blank 7)
+(defconstant $no-moderation-permission 8)
+(defconstant $bad-registration 9)
+(defconstant $used-registration 10)
+(defconstant $logged-in-registration 10)
+
+(defparameter *error-alist*
+  `((,$no-post-permission . "You don't have permission to submit posts.")
+    (,$unknown-post-number . "Unknown post number.")
+    (,$no-add-or-edit-permission . "You don't have permission to add or edit posts.")
+    (,$cant-delete . "Can't delete, no node-num.")
+    (,$no-edit-comment-permission . "You may only edit your own comments.")
+    (,$unknown-comment-number . "Unknown comment number.")
+    (,$name-may-not-be-blank . "Name may not be blank.")
+    (,$no-moderation-permission . "You do not have permission to do moderation.")
+    (,$bad-registration . "Bad registration link.")
+    (,$used-registration . "Registration link already used.")
+    (,$logged-in-registration . "You must logout before registering a new account.")))
+
+(defun registration-secret (&optional (db *data-db*))
+  (or (sexp-get db $CAPTCHA $SECRET :subdirs-p nil)
+      (setf (sexp-get db $CAPTCHA $SECRET :subdirs-p nil)
+            (cl-crypto:get-random-bits 160))))
+
+(defun compute-registration-hash (str &optional (db *data-db*))
+  (cl-crypto:sha1
+   (format nil "~x"
+           (logxor (registration-secret db)
+                   (parse-integer (cl-crypto:sha1 str) :radix 16)))))
+
+(defun encode-registration (username email &optional (db *data-db*))
+  (let* ((str (format nil "~a|~a" username email))
+         (hash (compute-registration-hash str db)))
+    (format nil "~a|~a"
+            (cl-base64:string-to-base64-string str)
+            hash)))
+
+(defun decode-registration (str &optional (db *data-db*))
+  (let ((parts (split-sequence:split-sequence #\| str)))
+    (unless (eql (length parts) 2)
+      (error "Malformed registration value"))
+    (destructuring-bind (str hash) parts
+      (setf str (cl-base64:base64-string-to-string str))
+      (unless (equal hash (compute-registration-hash str db))
+        (error "Mismatched registration hash"))
+      (setf parts (split-sequence:split-sequence #\| str))
+      (unless (eql (length parts) 2)
+        (error "Malformed registration value"))
+      (apply #'values parts))))
+
+(defun send-registration-email (base username email &optional (db *data-db*))
+  (with-settings (db)
+    (let* ((str (encode-registration username email db))
+           (url (format nil "admin/register?verify=~a"
+                        (hunchentoot:url-encode str)))
+           (site-name (get-setting :site-name))
+           (host "localhost")
+           (from "donotreply@example.com")
+           (subject (format nil "~a Registration" site-name))
+           (to email)
+           (plist (list :base base
+                        :url url
+                        :site-name site-name))
+           (message (fill-and-print-to-string
+                     (get-style-file ".registration-email.tmpl")
+                     plist)))
+      (cl-smtp:send-email host from to subject message
+                          :display-name site-name))))
+
+;; *** TO DO ***
+(defun send-email-change-email (user email db)
+  user email db)
+
+(defun profile (uri https &key verify oldpass newpass newpass2 email homepage submit)
+  (let* ((db (get-port-db))
+         (session hunchentoot:*session*)
+         (uid (and session (uid-of session)))
+         (user (and uid (read-user uid db)))
+         new-user-p
+         username
+         errmsg
+         newpass-p
+         new-homepage
+         new-email-p)
+    (when verify
+      (when session
+        (return-from profile
+          (error-page $logged-in-registration)))
+      (multiple-value-setq (username email)
+        (ignore-errors (decode-registration verify)))
+      (unless username
+        (return-from profile
+          (error-page $bad-registration)))
+      (when (get-user-by-name username)
+        (return-from profile
+          (error-page $used-registration)))
+      (setf user (list :uid (allocate-uid db)
+                       :name username
+                       :mail email)
+            new-user-p t))
+    (unless new-user-p
+      (setf username (getf user :name))
+      (unless submit
+        (setf email (getf user :mail)
+              homepage (getf user :homepage))))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (when submit
+        (when (and new-user-p (blankp newpass))
+          (setf errmsg "You must specify a password"))
+        (unless (or errmsg (blankp newpass))
+          (cond ((and (not new-user-p) (not (equal (md5 oldpass) (getf user :pass))))
+                 (setf errmsg "Old password incorrect."))
+                ((not (equal newpass newpass2))
+                 (setf errmsg "New password mismatch."))
+                (t (setf (getf user :pass) (md5 newpass)
+                         newpass-p t))))
+        (when (blankp homepage) (setf homepage nil))
+        (unless (equal homepage (getf user :homepage))
+          (setf (getf user :homepage) homepage
+                new-homepage homepage))
+        (unless (equal email (getf user :mail))
+          (send-email-change-email user email db)
+          (setf new-email-p t))
+        (cond ((or newpass-p new-homepage new-email-p)
+               (when (or new-user-p newpass-p new-homepage)
+                 (setf (read-user (getf user :uid) db) user)
+                 (when new-user-p
+                   (add-user-to-usernamehash user db)))
+               (let ((plist (list :home home
+                                  :base base
+                                  :newpass-p newpass-p
+                                  :new-homepage (efh new-homepage)
+                                  :new-email-p new-email-p)))
+                 (when new-user-p
+                   (make-new-session (getf user :uid)))
+                 (return-from profile
+                   (if new-user-p
+                       (render-template ".registration-complete.tmpl" plist
+                                        :add-index-comment-links-p t
+                                        :data-db db)
+                       (render-template ".profile-updated.tmpl" plist
+                                        :add-index-comment-links-p t
+                                        :data-db db)))))
+              (t (unless errmsg
+                   (setf errmsg "No changes requested. None made.")))))
+      (let ((plist (list :home home
+                         :base base
+                         :verify verify
+                         :errmsg errmsg
+                         :new-user-p new-user-p
+                         :username (efh username)
+                         :email (efh email)
+                         :homepage (efh homepage))))
+        (render-template ".profile.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db db)))))
+
+(defun register (uri https &key submit username email
+                 captcha-response captcha-hidden verify)
+  (when verify
+    (return-from register
+      (profile uri https :verify verify)))
+  (multiple-value-bind (base home) (compute-base-and-home uri https)
+    (let ((session hunchentoot:*session*)
+          (db (get-port-db))
+          errmsg
+          captcha-explanation
+          captcha-query
+          captcha-response-size)
+      (when (and session (uid-of session))
+        (return-from register (profile uri https)))
+      (when submit
+        (cond ((blankp username)
+               (setf errmsg "User name must be specified."))
+              ((get-user-by-name username db)
+               (setf errmsg "User name in use. Choose another."))
+              ((blankp email)
+               (setf errmsg "Email must be specified.")))
+        (unless errmsg
+          (multiple-value-bind (ok reason)
+              (validate-captcha captcha-response captcha-hidden)
+            (unless ok
+              (setf errmsg (if (eq reason :timeout)
+                               "Captcha timed out. Enter new answer."
+                               "Wrong answer to captcha. Try again.")
+                    captcha-response nil))))
+        (unless errmsg
+          (handler-case
+              (send-registration-email base username email db)
+            (error (c)
+              (setf errmsg (format nil "Cannot send email to ~a: ~a" email c))))
+          (unless errmsg
+            (let ((plist (list :home home
+                               :base base
+                               :email (hsc email))))
+              (return-from register
+                (render-template ".registration-emailed.tmpl" plist
+                                 :add-index-comment-links-p t
+                                 :data-db db))))))
+      (when (blankp captcha-response)
+        (multiple-value-setq
+            (captcha-explanation captcha-query
+                                 captcha-response-size captcha-hidden)
+          (captcha-values (make-captcha db))))
+      (let ((plist (list :home home
+                         :base base
+                         :errmsg (hsc errmsg)
+                         :username (hsc username)
+                         :email (hsc email)
+                         :captcha-explanation captcha-explanation
+                         :captcha-query captcha-query
+                         :captcha-response-size captcha-response-size
+                         :captcha-response captcha-response
+                         :captcha-hidden captcha-hidden)))
+        (render-template ".register.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db db)))))
+        
 
 ;;;
 ;;; Implementation of URL handlers
@@ -214,25 +465,6 @@
 (defun not-found ()
   (setf (hunchentoot:return-code*) hunchentoot:+http-not-found+)
   "404")
-
-(defconstant $no-post-permission 1)
-(defconstant $unknown-post-number 2)
-(defconstant $no-add-or-edit-permission 3)
-(defconstant $cant-delete 4)
-(defconstant $no-edit-comment-permission 5)
-(defconstant $unknown-comment-number 6)
-(defconstant $name-may-not-be-blank 7)
-(defconstant $no-moderation-permission 8)
-
-(defparameter *error-alist*
-  `((,$no-post-permission . "You don't have permission to submit posts.")
-    (,$unknown-post-number . "Unknown post number.")
-    (,$no-add-or-edit-permission . "You don't have permission to add or edit posts.")
-    (,$cant-delete . "Can't delete, no node-num.")
-    (,$no-edit-comment-permission . "You may only edit your own comments.")
-    (,$unknown-comment-number . "Unknown comment number.")
-    (,$name-may-not-be-blank . "Name may not be blank.")
-    (,$no-moderation-permission . "You do not have permission to do moderation")))
 
 (defun error-url (uri https errnum)
   (format nil "~aadmin/?error=~d" (compute-base-and-home uri https) errnum))
@@ -743,6 +975,7 @@
       (setf author (getf user :name)))
     (when (and user (not comment-num))
       (setf email (getf user :mail)
+            homepage (getf user :homepage)
             status 0
             format 1))      
     (unless (or (null comment-num)
@@ -942,9 +1175,9 @@
                     (alias (car (getf node :aliases)))
                     (comment-plist
                      (list :cid comment-num
-                           :subject title
-                           :name author
-                           :homepage homepage
+                           :subject (efh title)
+                           :name (efh author)
+                           :homepage (efh homepage)
                            :post-date post-time
                            :comment (drupal-format body format)
                            :home home

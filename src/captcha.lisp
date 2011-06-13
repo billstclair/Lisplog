@@ -13,6 +13,12 @@
   response-size
   hidden-value)
 
+(defun captcha-values (captcha)
+  (values (captcha-query-explanation captcha)
+          (captcha-query-html captcha)
+          (captcha-response-size captcha)
+          (captcha-hidden-value captcha)))
+
 (defun read-captcha-state (&optional (db *data-db*))
   (sexp-get db $CAPTCHA $CAPTCHA :subdirs-p nil))
 
@@ -67,8 +73,9 @@
                         (when (< x  y) (rotatef x y))
                         '-)
                        (t '*)))
+             (opname (if (eq op '*) "x" op))
              (res (funcall op x y))
-             (query (format nil "~d ~a ~d = " x op y))
+             (query (format nil "~d ~a ~d = " x opname y))
              (seed-int (parse-hex seed))
              (res-hash (cl-crypto:sha1 (format nil "~d" res)))
              (res-int (parse-hex res-hash))

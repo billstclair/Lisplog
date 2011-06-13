@@ -20,7 +20,7 @@
   :depends-on (fsdb cl-crypto           ;local
                md5 anaphora html-template cl-fad cl-ppcre
                split-sequence bordeaux-threads hunchentoot
-               eager-future)
+               eager-future cl-base64 cl-smtp)
   :components
   ((:module src
     :serial t

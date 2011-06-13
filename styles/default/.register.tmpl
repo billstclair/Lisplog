@@ -1,0 +1,33 @@
+<h2 class="content-title">Register</h2>
+<p>Fill in your desired user name<!-- TMPL_IF captcha-query -->
+, email, and the answer to the captcha below,<!-- TMPL_ELSE -->
+and email,<!-- /TMPL_IF -->
+and a registration link will be sent to you. Click on the link in that
+email to complete your registration.</p>
+<p>Your user name is case sensitive and may include spaces, periods, commas,
+and other punctuation.</p>
+<div class="register"><!-- TMPL_IF errmsg -->
+  <div class="errmsg"><!-- TMPL_VAR errmsg --></div><!-- /TMPL_IF -->
+  <form action="admin/register" method="post">
+    <table>
+      <tr>
+        <th>User name:</th>
+        <td><input type="text" name="username" size="20" value="<!-- TMPL_VAR username -->"/></td>
+      </tr><tr>
+        <th>Email:</th>
+        <td><input type="text" name="email" size="40" value="<!-- TMPL_VAR email -->"/></td>
+      </tr>
+    </table><!-- TMPL_IF captcha-hidden --><!-- TMPL_IF captcha-query -->
+    <fieldset>
+      <legend>Captcha</legend>
+      <!-- TMPL_VAR captcha-explanation --><br/>
+      <!-- TMPL_VAR captcha-query -->
+      <input type="text" name="captcha-response" size="<!-- TMPL_VAR captcha-response-size -->" value="<!-- TMPL_VAR captcha-response -->" autocomplete="off"/>
+    </fieldset><!-- TMPL_ELSE -->
+    <input type="hidden" name="captcha-response" value="<!-- TMPL_VAR captcha-response -->"/><!-- /TMPL_IF -->
+    <input type="hidden" name="captcha-hidden" value="<!-- TMPL_VAR captcha-hidden -->"/><!-- /TMPL_IF -->
+    <p>
+    <input type="submit" name="submit" value="Submit">
+    </p>
+  </form>
+</div>

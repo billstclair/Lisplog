@@ -4,17 +4,20 @@ Dynamic server
 If http:// is left off of a home page in a comment, add it.
 
 Registration and user settings editor.
+  Mostly done.
+  Need to finish email change (send email, process link).
+  Need to do user moderation page, so I can remove users who turn out to be
+    spammers.
+  May eventually need to moderate new users.
 
-Make user id in login page case insensitive.
+Maximum length for node aliases (site files names).
 
 Categories page, linked from the category name on each post, containing the last 10 posts in each category. Add to RSS feed.
 
 "Hold" column ("H") on Comments Moderation page. Let users moderate their own
 unpublished comments.
 
-Threads page, accessible from Settings.
-  Id: ccl:process-serial-number, Name: bt:thread-name, Status: ccl:process-whostate
-  Sort by Id descending, or Name
+Twitter integration: account & post
 
 [quote person]
 ctrl-shift-Q javascript to enter blockquote
