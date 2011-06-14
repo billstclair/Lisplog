@@ -2,5 +2,6 @@
 <div class="profile-updated"><!-- TMPL_IF newpass-p -->
   <p>Your password has been changed.</p><!-- /TMPL_IF --><!-- TMPL_IF new-homepage -->
   <p>You homepage is now <a href="<!-- TMPL_VAR new-homepage -->"><!-- TMPL_VAR new-homepage --></a></p><!-- /TMPL_IF  --><!-- TMPL_IF new-email-p -->
-  <p>An email has been sent to your new email address. Click on the link in that email to complete the email change.</p><!-- /TMPL_IF -->
+  <p>An email has been sent to <!-- TMPL_VAR new-email -->. Click on the link in that email to complete the email change.</p><!-- /TMPL_IF --><!-- TMPL_IF email-changed-p -->
+  <p>Your email address has been changed to <!-- TMPL_VAR new-email --><!-- /TMPL_IF -->
 </div>

@@ -55,7 +55,7 @@
     (let ((style (get-setting :style)))
       (or (and style (fsdb:db-get *styles-db* style file))
           (fsdb:db-get *styles-db* $DEFAULT file)
-          (error "No index template for style: ~s" style)))))
+          (error "No ~s template for style: ~s" file style)))))
 
 (defun write-site-file (path contents &optional (site-db *site-db*))
   (setf (fsdb:db-get site-db path) contents)

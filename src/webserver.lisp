@@ -163,6 +163,11 @@
                :homepage homepage
                :submit submit)))
 
+(hunchentoot:define-easy-handler (handle-email-change :uri "/emailchange")
+    (uri https verify)
+  (or (login-screen uri https)
+      (email-change uri https verify)))
+
 ;;;
 ;;; Login and registration
 ;;;
@@ -235,7 +240,8 @@
 (defconstant $no-moderation-permission 8)
 (defconstant $bad-registration 9)
 (defconstant $used-registration 10)
-(defconstant $logged-in-registration 10)
+(defconstant $logged-in-registration 11)
+(defconstant $bad-email-change 12)
 
 (defparameter *error-alist*
   `((,$no-post-permission . "You don't have permission to submit posts.")
@@ -248,7 +254,8 @@
     (,$no-moderation-permission . "You do not have permission to do moderation.")
     (,$bad-registration . "Bad registration link.")
     (,$used-registration . "Registration link already used.")
-    (,$logged-in-registration . "You must logout before registering a new account.")))
+    (,$logged-in-registration . "You must logout before registering a new account.")
+    (,$bad-email-change . "Invalid email change link.")))
 
 (defun registration-secret (&optional (db *data-db*))
   (or (sexp-get db $CAPTCHA $SECRET :subdirs-p nil)
@@ -300,9 +307,49 @@
       (cl-smtp:send-email host from to subject message
                           :display-name site-name))))
 
-;; *** TO DO ***
-(defun send-email-change-email (user email db)
-  user email db)
+(defun send-email-change-email (base username email db)
+  (with-settings (db)
+    (let* ((str (encode-registration username email db))
+           (url (format nil "admin/emailchange?verify=~a"
+                        (hunchentoot:url-encode str)))
+           (site-name (get-setting :site-name))
+           (host "localhost")
+           (from "donotreply@example.com")
+           (subject (format nil "~a Email Change" site-name))
+           (to email)
+           (plist (list :base base
+                        :url url
+                        :email email
+                        :site-name site-name))
+           (message (fill-and-print-to-string
+                     (get-style-file ".email-change-email.tmpl")
+                     plist)))
+      (cl-smtp:send-email host from to subject message
+                          :display-name site-name))))
+
+(defun email-change (uri https verify)
+  (let* ((db (get-port-db))
+         (session hunchentoot:*session*)
+         (uid (and session (uid-of session)))
+         (user (and uid (read-user uid db))))
+    (multiple-value-bind (username email)
+        (ignore-errors (decode-registration verify))
+      (unless (and username
+                   (equal username (getf user :name))
+                   (equal email (getf user :new-email)))
+        (return-from email-change
+          (redirect-to-error-page uri https $bad-email-change)))
+      (remf user :new-email)
+      (setf (getf user :mail) email
+            (read-user uid db) user)
+      (multiple-value-bind (base home) (compute-base-and-home uri https)
+        (let ((plist (list :home home
+                           :base base
+                           :new-email email
+                           :email-changed-p t)))
+          (render-template ".profile-updated.tmpl" plist
+                           :add-index-comment-links-p t
+                           :data-db db))))))        
 
 (defun profile (uri https &key verify oldpass newpass newpass2 email homepage submit)
   (let* ((db (get-port-db))
@@ -314,19 +361,21 @@
          errmsg
          newpass-p
          new-homepage
-         new-email-p)
+         new-email-p
+         email-changed-p
+         new-email)
     (when verify
       (when session
         (return-from profile
-          (error-page $logged-in-registration)))
+          (redirect-to-error-page uri https $logged-in-registration)))
       (multiple-value-setq (username email)
         (ignore-errors (decode-registration verify)))
       (unless username
         (return-from profile
-          (error-page $bad-registration)))
+          (redirect-to-error-page uri https $bad-registration)))
       (when (get-user-by-name username)
         (return-from profile
-          (error-page $used-registration)))
+          (redirect-to-error-page uri https $used-registration)))
       (setf user (list :uid (allocate-uid db)
                        :name username
                        :mail email)
@@ -352,10 +401,23 @@
           (setf (getf user :homepage) homepage
                 new-homepage homepage))
         (unless (equal email (getf user :mail))
-          (send-email-change-email user email db)
-          (setf new-email-p t))
-        (cond ((or newpass-p new-homepage new-email-p)
-               (when (or new-user-p newpass-p new-homepage)
+          (cond ((memq :admin (getf user :permissions))
+                 (setf (getf user :mail) email
+                       new-email email
+                       email-changed-p t))
+                (t (handler-case
+                       (progn
+                         (send-email-change-email base username email db)
+                         (setf new-email-p t
+                               new-email email
+                               (getf user :new-email) email))
+                     (error (c)
+                       (setf errmsg
+                             (format nil "Cannot send email to ~a: ~a" email c)))))))
+        (cond ((and (not errmsg)
+                    (or newpass-p new-homepage new-email-p email-changed-p))
+               (when (or new-user-p newpass-p new-homepage
+                         new-email-p email-changed-p)
                  (setf (read-user (getf user :uid) db) user)
                  (when new-user-p
                    (add-user-to-usernamehash user db)))
@@ -363,7 +425,9 @@
                                   :base base
                                   :newpass-p newpass-p
                                   :new-homepage (efh new-homepage)
-                                  :new-email-p new-email-p)))
+                                  :new-email (efh new-email)
+                                  :new-email-p new-email-p
+                                  :email-changed-p email-changed-p)))
                  (when new-user-p
                    (make-new-session (getf user :uid)))
                  (return-from profile
@@ -379,7 +443,7 @@
       (let ((plist (list :home home
                          :base base
                          :verify verify
-                         :errmsg errmsg
+                         :errmsg (efh errmsg)
                          :new-user-p new-user-p
                          :username (efh username)
                          :email (efh email)

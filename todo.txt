@@ -5,7 +5,6 @@ If http:// is left off of a home page in a comment, add it.
 
 Registration and user settings editor.
   Mostly done.
-  Need to finish email change (send email, process link).
   Need to do user moderation page, so I can remove users who turn out to be
     spammers.
   May eventually need to moderate new users.
