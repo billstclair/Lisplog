@@ -4,6 +4,7 @@
   <p>To complete your registration, enter your password twice, enter your home page if you want to, and press the "Submit" button.</p><!-- /TMPL_IF -->
   <form action="admin/profile" method="post"><!-- TMPL_IF verify -->
     <input type="hidden" name="verify" value="<!-- TMPL_VAR verify -->"/><!-- /TMPL_IF -->
+    <input type="hidden" name="uid" value="<!-- TMPL_VAR uid -->"/>
     <table>
       <tr>
         <th>Username:</th>

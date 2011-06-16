@@ -5,9 +5,8 @@ If http:// is left off of a home page in a comment, add it.
 
 Registration and user settings editor.
   Mostly done.
-  Need to do user moderation page, so I can remove users who turn out to be
-    spammers.
-  May eventually need to moderate new users.
+  Send email to (get-setting :new-user-notify-email) on completed registration.
+  "Forgot password" link on login page.
 
 Maximum length for node aliases (site files names).
 

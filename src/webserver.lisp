@@ -141,6 +141,15 @@
   (or (login-screen uri https)
       (submit-moderate uri https :submit submit)))
 
+(hunchentoot:define-easy-handler (handle-users :uri "/users") (uri https)
+  (or (login-screen uri https)
+      (users uri https)))
+
+(hunchentoot:define-easy-handler (handle-submit-users :uri "/submit_users")
+    (uri https submit)
+  (or (login-screen uri https)
+      (submit-users uri https :submit submit)))
+
 (hunchentoot:define-easy-handler (handle-register :uri "/register")
     (uri https submit username email captcha-response captcha-hidden verify)
   (register uri https
@@ -152,9 +161,10 @@
             :verify verify))
 
 (hunchentoot:define-easy-handler (handle-profile :uri "/profile")
-    (uri https verify oldpass newpass newpass2 email homepage submit)
+    (uri https uid verify oldpass newpass newpass2 email homepage submit)
   (or (and (not verify) (login-screen uri https))
       (profile uri https
+               :uid uid
                :verify verify
                :oldpass oldpass
                :newpass newpass
@@ -351,11 +361,13 @@
                            :add-index-comment-links-p t
                            :data-db db))))))        
 
-(defun profile (uri https &key verify oldpass newpass newpass2 email homepage submit)
+(defun profile (uri https &key uid verify oldpass newpass newpass2 email homepage
+                submit)
   (let* ((db (get-port-db))
          (session hunchentoot:*session*)
-         (uid (and session (uid-of session)))
-         (user (and uid (read-user uid db)))
+         (session-uid (and session (uid-of session)))
+         (user (and session-uid (read-user session-uid db)))
+         (admin-p (memq :admin (getf user :permissions)))
          new-user-p
          username
          errmsg
@@ -380,6 +392,10 @@
                        :name username
                        :mail email)
             new-user-p t))
+    (unless (blankp uid) (setf uid (ignore-errors (parse-integer uid))))
+    (cond ((or (blankp uid) (not admin-p))
+           (setf uid session-uid))
+          (t (setf user (read-user uid db))))
     (unless new-user-p
       (setf username (getf user :name))
       (unless submit
@@ -401,7 +417,7 @@
           (setf (getf user :homepage) homepage
                 new-homepage homepage))
         (unless (equal email (getf user :mail))
-          (cond ((memq :admin (getf user :permissions))
+          (cond (admin-p
                  (setf (getf user :mail) email
                        new-email email
                        email-changed-p t))
@@ -423,6 +439,9 @@
                    (add-user-to-usernamehash user db)))
                (let ((plist (list :home home
                                   :base base
+                                  :username (if (eql uid session-uid)
+                                                "Your"
+                                                (format nil "~a's" username))
                                   :newpass-p newpass-p
                                   :new-homepage (efh new-homepage)
                                   :new-email (efh new-email)
@@ -442,6 +461,7 @@
                    (setf errmsg "No changes requested. None made.")))))
       (let ((plist (list :home home
                          :base base
+                         :uid uid
                          :verify verify
                          :errmsg (efh errmsg)
                          :new-user-p new-user-p
@@ -1431,6 +1451,51 @@
       (render-template ".moderate-comments.tmpl" plist
                        :add-index-comment-links-p t
                        :data-db db))))
+
+;; <baseurl>/admin/users
+(defun users (uri https)
+  (submit-users uri https))
+
+(defun submit-users (uri https &key submit)
+  (let* ((db (get-port-db))
+         (session hunchentoot:*session*)
+         (uid (uid-of session))
+         (user (read-user uid db))
+         (admin-p (memq :admin (getf user :permissions)))
+         (users nil))
+    (unless admin-p
+      (return-from submit-users
+        (redirect-to-error-page uri https $no-moderation-permission)))
+    (when submit
+      (dolist (cell (hunchentoot:post-parameters hunchentoot:*request*))
+        (let ((name (car cell))
+              (value (cdr cell)))
+          (when (eql 0 (search "c-" name :test #'equal))
+            (let ((uid (ignore-errors (parse-integer (subseq name 2)))))
+              (when (and uid (not (blankp value)))
+                (setf (read-user uid db) nil)))))))
+    (do-users (user db)
+      (let* ((uid (getf user :uid))
+             (name (efh (getf user :name)))
+             (email (efh (getf user :mail)))
+             (homepage (efh (getf user :homepage)))
+             (check-name (format nil "c-~d" uid))
+             (checked (hunchentoot:post-parameter check-name)))
+         (push (list :uid uid
+                     :name name
+                     :email email
+                     :homepage (unless (blankp homepage) homepage)
+                     :check-name check-name
+                     :checked checked)
+               users)))
+    (setf users (sort users #'> :key (lambda (x) (getf x :uid))))
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (let ((plist (list :home home
+                         :base base
+                         :users users)))
+        (render-template ".moderate-users.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db db)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
