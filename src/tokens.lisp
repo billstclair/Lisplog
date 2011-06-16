@@ -31,6 +31,7 @@
         $CATEGORIES
         $CATNODES
         $USERNAMEHASH
+        $EMAILHASH
         $SESSIONS
         $DEFAULT
         $COUNTERS

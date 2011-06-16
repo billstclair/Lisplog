@@ -144,6 +144,13 @@
 (defun probe-user (uid &optional (db *data-db*))
   (sexp-probe db $USERS uid))
 
+(defun delete-user (uid &optional (db *data-db*))
+  (let ((user (read-user uid db)))
+    (when user
+      (remove-username-from-usernamehash (getf user :name) uid db)
+      (remove-email-from-emailhash (getf user :mail) uid db)
+      (setf (read-user uid db) nil))))
+
 (defun read-nid (&optional (db *data-db*))
   (let ((nid-string (fsdb:db-get db $COUNTERS $NID))
         nid)

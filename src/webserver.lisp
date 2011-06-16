@@ -178,6 +178,16 @@
   (or (login-screen uri https)
       (email-change uri https verify)))
 
+(hunchentoot:define-easy-handler (handle-forgot-password :uri "/forgotpassword")
+    (uri https submit username email captcha-response captcha-hidden verify)
+  (forgot-password uri https
+                   :submit submit
+                   :username username
+                   :email email
+                   :captcha-response captcha-response
+                   :captcha-hidden captcha-hidden
+                   :verify verify))
+
 ;;;
 ;;; Login and registration
 ;;;
@@ -350,8 +360,10 @@
         (return-from email-change
           (redirect-to-error-page uri https $bad-email-change)))
       (remf user :new-email)
+      (remove-email-from-emailhash (getf user :mail) uid db)
       (setf (getf user :mail) email
             (read-user uid db) user)
+      (add-user-to-emailhash user db)
       (multiple-value-bind (base home) (compute-base-and-home uri https)
         (let ((plist (list :home home
                            :base base
@@ -1473,7 +1485,7 @@
           (when (eql 0 (search "c-" name :test #'equal))
             (let ((uid (ignore-errors (parse-integer (subseq name 2)))))
               (when (and uid (not (blankp value)))
-                (setf (read-user uid db) nil)))))))
+                (delete-user uid db)))))))
     (do-users (user db)
       (let* ((uid (getf user :uid))
              (name (efh (getf user :name)))
@@ -1494,6 +1506,60 @@
                          :base base
                          :users users)))
         (render-template ".moderate-users.tmpl" plist
+                         :add-index-comment-links-p t
+                         :data-db db)))))
+
+;; <baseurl>/admin/forgotpassword
+(defun forgot-password (uri https &key submit username email
+                        captcha-response captcha-hidden verify)
+  (let ((db (get-port-db))
+        captcha-explanation captcha-query captcha-response-size
+        errmsg)
+
+    (when submit
+      (when (blankp username) (setf username nil))
+      (when (blankp email) (setf email nil))
+      (cond (errmsg)
+            (username
+             )
+            (email
+             )
+            (t (setf errmsg "Enter either user name or email")))
+      (unless errmsg
+        (multiple-value-bind (ok reason)
+            (validate-captcha captcha-response captcha-hidden)
+          (unless ok
+            (setf errmsg
+                  (if (eq reason :timeout)
+                      "Captcha timed out. Enter new answer."
+                      "Wrong answer to captcha. Try again."))
+            (setf captcha-response nil))))
+      (unless errmsg
+        (let ((user (or (and username (get-user-by-name username db))
+                        (and email (get-user-by-email email db)))))
+          (cond (user
+                 )
+                (t (setf errmsg "There is no user with that name or email"))))))
+
+    (when (blankp captcha-response)
+      (let ((captcha (make-captcha db)))
+        (setf captcha-explanation (captcha-query-explanation captcha)
+              captcha-query (captcha-query-html captcha)
+              captcha-response-size (captcha-response-size captcha)
+              captcha-hidden (captcha-hidden-value captcha))))
+
+    (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (let ((plist (list :home home
+                         :base base
+                         :errmsg errmsg
+                         :username username
+                         :email email
+                         :captcha-explanation captcha-explanation
+                         :captcha-query captcha-query
+                         :captcha-response-size captcha-response-size
+                         :captcha-hidden captcha-hidden
+                         :captcha-response captcha-response)))
+        (render-template ".forgot-password.tmpl" plist
                          :add-index-comment-links-p t
                          :data-db db)))))
 

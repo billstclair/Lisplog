@@ -24,15 +24,57 @@
         (setf (read-usernamehash name db) uids)))))
 
 (defun get-user-by-name (username &optional (db *data-db*))
+  (maybe-index-users db)
   (let ((uids (read-usernamehash username db)))
     (dolist (uid uids)
       (let ((user (read-user uid db)))
         (when (and user (equal username (getf user :name)))
           (return user))))))
 
+(defun remove-username-from-usernamehash (username uid &optional (db *data-db*))
+  (let ((uids (delete uid (read-usernamehash username db))))
+    (setf (read-usernamehash username db) uids)))
+
+(defun read-emailhash (email &optional (db *data-db*))
+  (let ((hash (md5 (string-downcase email))))
+    (data-get $EMAILHASH hash :db db)))
+
+(defun (setf read-emailhash) (value email &optional (db *data-db*))
+  (let ((hash (md5 (string-downcase email))))
+    (setf (data-get $EMAILHASH hash :db db) value)))
+
+(defun add-user-to-emailhash (user &optional (db *data-db*))
+  (let* ((email (getf user :mail))
+         (uid (getf user :uid)))
+    (when (and email uid)
+      (let ((uids (read-emailhash email db)))
+        (pushnew uid uids)
+        (setf (read-emailhash email db) uids)))))
+
+(defun get-user-by-email (email &optional (db *data-db*))
+  (maybe-index-users db)
+  (setf email (string-downcase email))
+  (let ((uids (read-emailhash email db)))
+    (dolist (uid uids)
+      (let ((user (read-user uid db)))
+        (when (and user (equal email (string-downcase (getf user :mail))))
+          (return user))))))
+
+(defun remove-email-from-emailhash (email uid &optional (db *data-db*))
+  (let ((uids (delete uid (read-emailhash email db))))
+    (setf (read-emailhash email db) uids)))
+
 (defun index-users (&optional (db *data-db*))
   (do-users (user db)
-    (add-user-to-usernamehash user db)))
+    (add-user-to-usernamehash user db)
+    (add-user-to-emailhash user db)))
+
+(defun maybe-index-users (&optional (db *data-db*))
+  (unless (and (aand (probe-file (fsdb:db-filename db $USERNAMEHASH))
+                     (cl-fad:directory-pathname-p it))
+               (aand (probe-file (fsdb:db-filename db $EMAILHASH))
+                     (cl-fad:directory-pathname-p it)))
+    (index-users)))
 
 ;; Should do something to posts with status other than 1 here.
 ;; Then we'll be able to view them in the admin interface.
