@@ -1509,46 +1509,99 @@
                          :add-index-comment-links-p t
                          :data-db db)))))
 
+(defun send-forgot-password-email (base user &optional (db *data-db*))
+  (when (integerp user)
+    (setf user (or (read-user user db) (error "No uid: ~s" user))))
+  (with-settings (db)
+    (let* ((seed (format nil "~x" (cl-crypto:get-random-bits 64)))
+           (username (getf user :name))
+           (email (getf user :mail))
+           (str (encode-registration username seed db))
+           (url (format nil "admin/forgotpassword?verify=~a"
+                        (hunchentoot:url-encode str)))
+           (site-name (get-setting :site-name))
+           (host "localhost")
+           (from "donotreply@example.com")
+           (subject (format nil "~a Password Recovery" site-name))
+           (to email)
+           (plist (list :base base
+                        :url url
+                        :email email
+                        :site-name site-name))
+           (message (fill-and-print-to-string
+                     (get-style-file ".forgot-password-email.tmpl")
+                     plist)))
+      (setf (getf user :forgot-password-seed) seed
+            (read-user (getf user :uid) db) user)
+      (cl-smtp:send-email host from to subject message
+                          :display-name site-name))))
+
 ;; <baseurl>/admin/forgotpassword
 (defun forgot-password (uri https &key submit username email
                         captcha-response captcha-hidden verify)
   (let ((db (get-port-db))
         captcha-explanation captcha-query captcha-response-size
+        user
         errmsg)
-
-    (when submit
-      (when (blankp username) (setf username nil))
-      (when (blankp email) (setf email nil))
-      (cond (errmsg)
-            (username
-             )
-            (email
-             )
-            (t (setf errmsg "Enter either user name or email")))
-      (unless errmsg
-        (multiple-value-bind (ok reason)
-            (validate-captcha captcha-response captcha-hidden)
-          (unless ok
-            (setf errmsg
-                  (if (eq reason :timeout)
-                      "Captcha timed out. Enter new answer."
-                      "Wrong answer to captcha. Try again."))
-            (setf captcha-response nil))))
-      (unless errmsg
-        (let ((user (or (and username (get-user-by-name username db))
-                        (and email (get-user-by-email email db)))))
-          (cond (user
-                 )
-                (t (setf errmsg "There is no user with that name or email"))))))
-
-    (when (blankp captcha-response)
-      (let ((captcha (make-captcha db)))
-        (setf captcha-explanation (captcha-query-explanation captcha)
-              captcha-query (captcha-query-html captcha)
-              captcha-response-size (captcha-response-size captcha)
-              captcha-hidden (captcha-hidden-value captcha))))
-
     (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (when verify
+        (multiple-value-bind (username seed)
+            (ignore-errors (decode-registration verify))
+          (cond ((not username)
+                 (setf errmsg "Malformed password recovery link"))
+                ((not (setf user (get-user-by-name username db)))
+                 (setf errmsg "Can't find user in password recovery link"))
+                ((not (equal seed (getf user :forgot-password-seed)))
+                 (setf errmsg "Password recovery link already used. Try again"))
+                ((aand hunchentoot:*session*
+                       (not (eql (uid-of it) (getf user :uid))))
+                 (setf errmsg "You must log out to recover a forgotten password"))
+                (t
+                 (let ((uid (getf user :uid)))
+                   ;; Recover link used
+                   (remf user :forgot-password-seed)
+                   ;; No old password required to change password
+                   (setf (getf user :password-recovery) t
+                         (read-user uid db) user)
+                   (make-new-session (getf user :uid) db))
+                 (return-from forgot-password
+                   (hunchentoot:redirect (format nil "~aadmin/profile" base)))))))
+      (when submit
+        (when (blankp username) (setf username nil))
+        (when (blankp email) (setf email nil))
+        (unless (or username email)
+          (setf errmsg "Enter either user name or email"))
+        (unless errmsg
+          (setf user (or (and username (get-user-by-name username db))
+                         (and email (get-user-by-email email db))))
+          (unless user
+            (setf errmsg "There is no user with that name or email")))
+        (unless (and (not submit) (blankp captcha-response))
+          (multiple-value-bind (ok reason)
+              (validate-captcha captcha-response captcha-hidden)
+            (unless ok
+              (unless errmsg
+                (setf errmsg
+                      (if (eq reason :timeout)
+                          "Captcha timed out. Enter new answer."
+                          "Wrong answer to captcha. Try again.")))
+              (setf captcha-response nil))))
+        (when (and user (not errmsg))
+          (when (ignore-errors (send-forgot-password-email base user db))
+            (let ((plist (list :home home
+                               :base base)))
+              (return-from forgot-password
+                (render-template ".forgot-password-sent.tmpl" plist
+                                 :add-index-comment-links-p t
+                                 :data-db db))))))
+
+      (when (blankp captcha-response)
+        (let ((captcha (make-captcha db)))
+          (setf captcha-explanation (captcha-query-explanation captcha)
+                captcha-query (captcha-query-html captcha)
+                captcha-response-size (captcha-response-size captcha)
+                captcha-hidden (captcha-hidden-value captcha))))
+
       (let ((plist (list :home home
                          :base base
                          :errmsg errmsg
