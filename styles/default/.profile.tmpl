@@ -15,13 +15,17 @@
       </tr><tr>
         <th>Home page:</th>
         <td><input type="text" name="homepage" size="40" value="<!-- TMPL_VAR homepage -->"/></td>
+      </tr><tr>
+        <th>About:</th>
+        <td><textarea wrap="virtual" cols="80" rows="10" name="about"><!-- TMPL_VAR about --></textarea>
+        </td>
       </tr><tr><!-- TMPL_IF new-user-p --><!-- TMPL_ELSE -->
         <td colspan="2">
-          <p>To change your password, enter your old password and enter your new password twice.</p>
-        </td>
+          <p>To change your password, <!-- TMPL_IF require-old-password-p -->enter your old password and <!-- /TMPL_IF -->enter your new password twice.</p>
+        </td><!-- TMPL_IF require-old-password-p -->
       </tr><tr>
         <th>Old password:</th>
-        <td><input type="password" name="oldpass" size="40"/></td>
+        <td><input type="password" name="oldpass" size="40"/></td><!-- /TMPL_IF -->
       </tr><tr><!-- /TMPL_IF --><!-- TMPL_IF new-user-p -->
         <th>Password:</th><!-- TMPL_ELSE -->
         <th>New password:</th><!-- /TMPL_IF  -->

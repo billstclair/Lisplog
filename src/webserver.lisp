@@ -161,7 +161,7 @@
             :verify verify))
 
 (hunchentoot:define-easy-handler (handle-profile :uri "/profile")
-    (uri https uid verify oldpass newpass newpass2 email homepage submit)
+    (uri https uid verify oldpass newpass newpass2 email homepage about submit)
   (or (and (not verify) (login-screen uri https))
       (profile uri https
                :uid uid
@@ -171,6 +171,7 @@
                :newpass2 newpass2
                :email email
                :homepage homepage
+               :about about
                :submit submit)))
 
 (hunchentoot:define-easy-handler (handle-email-change :uri "/emailchange")
@@ -373,13 +374,17 @@
                            :add-index-comment-links-p t
                            :data-db db))))))        
 
+(defparameter *default-about*
+  "This is currently viewable only by the administrator, but may become public. Please replace this with something interesting about yourself.")
+
 (defun profile (uri https &key uid verify oldpass newpass newpass2 email homepage
-                submit)
+                about submit)
   (let* ((db (get-port-db))
          (session hunchentoot:*session*)
          (session-uid (and session (uid-of session)))
          (user (and session-uid (read-user session-uid db)))
          (admin-p (memq :admin (getf user :permissions)))
+         (require-old-password-p (not (getf user :password-recovery)))
          new-user-p
          username
          errmsg
@@ -387,7 +392,8 @@
          new-homepage
          new-email-p
          email-changed-p
-         new-email)
+         new-email
+         new-about-p)
     (when verify
       (when session
         (return-from profile
@@ -412,13 +418,16 @@
       (setf username (getf user :name))
       (unless submit
         (setf email (getf user :mail)
-              homepage (getf user :homepage))))
+              homepage (getf user :homepage)
+              about (getf user :about))))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (when submit
         (when (and new-user-p (blankp newpass))
           (setf errmsg "You must specify a password"))
         (unless (or errmsg (blankp newpass))
-          (cond ((and (not new-user-p) (not (equal (md5 oldpass) (getf user :pass))))
+          (cond ((and require-old-password-p
+                      (not new-user-p)
+                      (not (equal (md5 oldpass) (getf user :pass))))
                  (setf errmsg "Old password incorrect."))
                 ((not (equal newpass newpass2))
                  (setf errmsg "New password mismatch."))
@@ -428,6 +437,11 @@
         (unless (equal homepage (getf user :homepage))
           (setf (getf user :homepage) homepage
                 new-homepage homepage))
+        (cond ((blankp about) (setf about nil))
+              ((equal about *default-about*) (setf about nil)))
+        (unless (equal about (getf user :about))
+          (setf (getf user :about) about
+                new-about-p t))
         (unless (equal email (getf user :mail))
           (cond (admin-p
                  (setf (getf user :mail) email
@@ -443,12 +457,12 @@
                        (setf errmsg
                              (format nil "Cannot send email to ~a: ~a" email c)))))))
         (cond ((and (not errmsg)
-                    (or newpass-p new-homepage new-email-p email-changed-p))
-               (when (or new-user-p newpass-p new-homepage
-                         new-email-p email-changed-p)
-                 (setf (read-user (getf user :uid) db) user)
-                 (when new-user-p
-                   (add-user-to-usernamehash user db)))
+                    (or newpass-p new-homepage new-email-p
+                        email-changed-p new-about-p))
+               (setf (getf user :password-recovery) nil
+                     (read-user (getf user :uid) db) user)
+               (when new-user-p
+                 (add-user-to-usernamehash user db))
                (let ((plist (list :home home
                                   :base base
                                   :username (if (eql uid session-uid)
@@ -456,6 +470,7 @@
                                                 (format nil "~a's" username))
                                   :newpass-p newpass-p
                                   :new-homepage (efh new-homepage)
+                                  :new-about-p new-about-p
                                   :new-email (efh new-email)
                                   :new-email-p new-email-p
                                   :email-changed-p email-changed-p)))
@@ -470,16 +485,19 @@
                                         :add-index-comment-links-p t
                                         :data-db db)))))
               (t (unless errmsg
-                   (setf errmsg "No changes requested. None made.")))))
+                   (setf errmsg "No changes1 requested. None made.")))))
+      (unless about (setf about *default-about*))
       (let ((plist (list :home home
                          :base base
                          :uid uid
                          :verify verify
                          :errmsg (efh errmsg)
+                         :require-old-password-p require-old-password-p
                          :new-user-p new-user-p
                          :username (efh username)
                          :email (efh email)
-                         :homepage (efh homepage))))
+                         :homepage (efh homepage)
+                         :about (efh about))))
         (render-template ".profile.tmpl" plist
                          :add-index-comment-links-p t
                          :data-db db)))))
@@ -1534,7 +1552,8 @@
       (setf (getf user :forgot-password-seed) seed
             (read-user (getf user :uid) db) user)
       (cl-smtp:send-email host from to subject message
-                          :display-name site-name))))
+                          :display-name site-name)))
+  t)                                    ;success
 
 ;; <baseurl>/admin/forgotpassword
 (defun forgot-password (uri https &key submit username email
@@ -1558,7 +1577,7 @@
                  (setf errmsg "You must log out to recover a forgotten password"))
                 (t
                  (let ((uid (getf user :uid)))
-                   ;; Recover link used
+                   ;; Recovery link used
                    (remf user :forgot-password-seed)
                    ;; No old password required to change password
                    (setf (getf user :password-recovery) t
