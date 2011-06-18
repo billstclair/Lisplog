@@ -102,6 +102,23 @@
           (when session
             (setf (gethash session-id *session-hash*) session))))))
 
+(defun delete-session (session-id &optional (db *data-db*))
+  (let* ((session (ignore-errors hunchentoot:*session*))
+         (id (and session (session-id-of session))))
+    (when (equal id session-id)
+      (end-session)))
+  (let ((session (get-session session-id db)))
+    (when session
+      (with-session-lock
+        (let* ((uid (uid-of session))
+               (user (read-user uid db))
+               (sessions (getf user :sessions)))
+          (when (member session-id sessions :test #'equal)
+            (setf (getf user :sessions) (delete session-id sessions :test #'equal)
+                  (read-user uid) user)))
+        (setf (data-get $SESSIONS session-id :db db) nil)
+        (remhash session-id *session-hash*)))))
+
 ;;;
 ;;; Hunchentoot interface
 ;;;

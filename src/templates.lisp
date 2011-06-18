@@ -149,6 +149,8 @@
     (when user
       (remove-username-from-usernamehash (getf user :name) uid db)
       (remove-email-from-emailhash (getf user :mail) uid db)
+      (dolist (session-id (getf user :sessions))
+        (delete-session session-id db))
       (setf (read-user uid db) nil))))
 
 (defun read-nid (&optional (db *data-db*))

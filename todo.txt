@@ -3,12 +3,6 @@ Dynamic server
 
 If http:// is left off of a home page in a comment, add it.
 
-Registration and user settings editor.
-  Mostly done:
-    Send email to (get-setting :new-user-notify-email) on completed registration.
-    If (getf user :password-recovery) is true, don't require old
-      password to change password in PROFILE
-
 Maximum length for node aliases (site file names).
 
 Categories page, linked from the category name on each post, containing the last 10 posts in each category. Add to RSS feed.

@@ -1,4 +1,4 @@
-                                        ; -*- mode: lisp -*-
+; -*- mode: lisp -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -21,8 +21,8 @@
 ;; Same sequence of bytes, but stored internally as latin-1.
 ;; It's actually less pain that way. Slime doesn't handle
 ;; UTF-8 over the wire.
-(setf hunchentoot:*default-content-type*
-      "text/html; charset=utf-8")
+(setf hunchentoot:*default-content-type* "text/html; charset=utf-8"
+      hunchentoot:*rewrite-for-session-urls* nil)
 
 (defun start (&optional (db *data-db*))
   (when db
@@ -161,7 +161,8 @@
             :verify verify))
 
 (hunchentoot:define-easy-handler (handle-profile :uri "/profile")
-    (uri https uid verify oldpass newpass newpass2 email homepage about submit)
+    (uri https uid verify oldpass newpass newpass2 email homepage about
+         submit delete)
   (or (and (not verify) (login-screen uri https))
       (profile uri https
                :uid uid
@@ -172,7 +173,8 @@
                :email email
                :homepage homepage
                :about about
-               :submit submit)))
+               :submit submit
+               :delete delete)))
 
 (hunchentoot:define-easy-handler (handle-email-change :uri "/emailchange")
     (uri https verify)
@@ -263,6 +265,7 @@
 (defconstant $used-registration 10)
 (defconstant $logged-in-registration 11)
 (defconstant $bad-email-change 12)
+(defconstant $no-such-uid 13)
 
 (defparameter *error-alist*
   `((,$no-post-permission . "You don't have permission to submit posts.")
@@ -276,7 +279,8 @@
     (,$bad-registration . "Bad registration link.")
     (,$used-registration . "Registration link already used.")
     (,$logged-in-registration . "You must logout before registering a new account.")
-    (,$bad-email-change . "Invalid email change link.")))
+    (,$bad-email-change . "Invalid email change link.")
+    (,$no-such-uid . "No such UID")))
 
 (defun registration-secret (&optional (db *data-db*))
   (or (sexp-get db $CAPTCHA $SECRET :subdirs-p nil)
@@ -374,16 +378,48 @@
                            :add-index-comment-links-p t
                            :data-db db))))))        
 
-(defparameter *default-about*
-  "This is currently viewable only by the administrator, but may become public. Please replace this with something interesting about yourself.")
+;; This will need to return a list when we have sites with more than
+;; one administrator.
+;; And we'll need to cache the admin UIDs.
+(defun get-admin-user (&optional (db *data-db*))
+  (do-users (user db)
+    (when (memq :admin (getf user :permissions))
+      (return user))))
+
+(defun send-notification-email (base title text url &optional (db *data-db*))
+  (ignore-errors
+    (send-notification-email-internal base title text url db)))
+
+(defun send-notification-email-internal (base title text url db)
+  (with-settings (db)
+    (let* ((user (aand (ignore-errors hunchentoot:*session*)
+                       (read-user (uid-of it) db)))
+           (admin-user (get-admin-user db))
+           (email (getf admin-user :mail)))
+      (when (and email (not (equal email (getf user :mail))))
+        (let* ((site-name (get-setting :site-name))
+               (host "localhost")
+               (from "donotreply@example.com")
+               (subject (format nil "~a: ~a" site-name title))
+               (to email)
+               (plist (list :base base
+                            :title title
+                            :text text
+                            :url url))
+               (message (fill-and-print-to-string
+                         (get-style-file ".notification-email.tmpl")
+                         plist)))
+          (cl-smtp:send-email host from to subject message
+                              :display-name site-name))))))
 
 (defun profile (uri https &key uid verify oldpass newpass newpass2 email homepage
-                about submit)
+                about submit delete)
   (let* ((db (get-port-db))
          (session hunchentoot:*session*)
          (session-uid (and session (uid-of session)))
          (user (and session-uid (read-user session-uid db)))
          (admin-p (memq :admin (getf user :permissions)))
+         (delete-p (not admin-p))
          (require-old-password-p (not (getf user :password-recovery)))
          new-user-p
          username
@@ -406,14 +442,24 @@
       (when (get-user-by-name username)
         (return-from profile
           (redirect-to-error-page uri https $used-registration)))
-      (setf user (list :uid (allocate-uid db)
+      (setf user (list :uid (setf uid (allocate-uid db))
                        :name username
                        :mail email)
-            new-user-p t))
-    (unless (blankp uid) (setf uid (ignore-errors (parse-integer uid))))
-    (cond ((or (blankp uid) (not admin-p))
-           (setf uid session-uid))
-          (t (setf user (read-user uid db))))
+            new-user-p t
+            delete-p nil))
+    (unless new-user-p
+      (when (and (stringp uid) (not (blankp uid)))
+        (setf uid (ignore-errors (parse-integer uid))))
+      (cond ((or (blankp uid) (not admin-p))
+             (setf uid session-uid))
+            (t (setf user (read-user uid db))
+               (unless (memq :admin (getf user :permissions))
+                 (setf delete-p t)))))
+    (unless user
+      (return-from profile
+        (redirect-to-error-page uri https $no-such-uid)))
+    (when (and admin-p (not (eql uid session-uid)))
+      (setf require-old-password-p nil))
     (unless new-user-p
       (setf username (getf user :name))
       (unless submit
@@ -421,6 +467,18 @@
               homepage (getf user :homepage)
               about (getf user :about))))
     (multiple-value-bind (base home) (compute-base-and-home uri https)
+      (when delete
+        (delete-user uid db)
+        (let ((plist (list :home home
+                           :base base
+                           :username (if (eql uid session-uid)
+                                         "Your"
+                                         (format nil "~a's" username))
+                           :deleted-p t)))
+          (return-from profile
+            (render-template ".profile-updated.tmpl" plist
+                             :add-index-comment-links-p t
+                             :data-db db))))
       (when submit
         (when (and new-user-p (blankp newpass))
           (setf errmsg "You must specify a password"))
@@ -437,12 +495,12 @@
         (unless (equal homepage (getf user :homepage))
           (setf (getf user :homepage) homepage
                 new-homepage homepage))
-        (cond ((blankp about) (setf about nil))
-              ((equal about *default-about*) (setf about nil)))
+        (when (blankp about)
+          (setf errmsg "Please tell me something about yourself."))
         (unless (equal about (getf user :about))
           (setf (getf user :about) about
                 new-about-p t))
-        (unless (equal email (getf user :mail))
+        (unless (or errmsg (equal email (getf user :mail)))
           (cond (admin-p
                  (setf (getf user :mail) email
                        new-email email
@@ -462,7 +520,14 @@
                (setf (getf user :password-recovery) nil
                      (read-user (getf user :uid) db) user)
                (when new-user-p
-                 (add-user-to-usernamehash user db))
+                 (add-user-to-usernamehash user db)
+                 (unless admin-p
+                   (send-notification-email
+                    base
+                    "New User"
+                    (format nil "~a <~a>" (getf user :name) (getf user :mail))
+                    (format nil "admin/profile?uid=~d" (getf user :uid))
+                    db)))
                (let ((plist (list :home home
                                   :base base
                                   :username (if (eql uid session-uid)
@@ -485,8 +550,7 @@
                                         :add-index-comment-links-p t
                                         :data-db db)))))
               (t (unless errmsg
-                   (setf errmsg "No changes1 requested. None made.")))))
-      (unless about (setf about *default-about*))
+                   (setf errmsg "No changes requested. None made.")))))
       (let ((plist (list :home home
                          :base base
                          :uid uid
@@ -497,7 +561,8 @@
                          :username (efh username)
                          :email (efh email)
                          :homepage (efh homepage)
-                         :about (efh about))))
+                         :about (efh about)
+                         :delete-p delete-p)))
         (render-template ".profile.tmpl" plist
                          :add-index-comment-links-p t
                          :data-db db)))))
@@ -572,7 +637,7 @@
   (declare (ignore alias))              ;do later
   (let* ((pos (search "/admin/" uri :from-end t :test #'equal))
          (base (format nil "http~a://~a"
-                       (if (equal https "on") "s" "")
+                       (if (or (eq https t) (equal https "on")) "s" "")
                        (subseq uri 0 (1+ pos)))))
     (values base ".")))
 
@@ -1202,7 +1267,7 @@
          (node (and node-num (read-node node-num db)))
          (post-alias (efh (car (getf node :aliases))))
          (post-title (efh (getf node :title)))
-         (uid (getf comment :uid))
+         (uid (if comment-num (getf comment :uid) session-uid))
          (created (getf comment :timestamp))
          (post-time (unix-time-to-rfc-1123-string
                      (or created (get-unix-time))))
@@ -1315,6 +1380,17 @@
                                      :name author
                                      :mail email
                                      :homepage homepage)
+             (unless admin-p
+               (let ((base (compute-base-and-home uri "on"))
+                     (url (if (eql 0 status)
+                              (format nil "~a#comment-~a" alias cid)
+                              "admin/moderate")))
+                 (send-notification-email
+                  base
+                  "New Comment"
+                  (format nil "From: ~a <~a>~%Subject: ~a" author email title)
+                  url
+                  db)))
              (multiple-value-bind (base home) (compute-base-and-home uri https)
                (cond ((eql 0 status)
                       (hunchentoot:redirect
@@ -1352,15 +1428,18 @@
          (session hunchentoot:*session*)
          (uid (uid-of session))
          (user (read-user uid db))
-         (admin-p (memq :admin (getf user :permissions)))
+         (permissions (getf user :permissions))
+         (admin-p (memq :admin permissions))
+         (poster-p (memq :poster permissions))
          plist)
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (cond ((hunchentoot:parameter "logout")
-             (end-session)
+             (delete-session (session-id-of session) db)
              (return-from settings (hunchentoot:redirect base))))
       (setf plist (list :home home
                         :base base
-                        :admin-p admin-p))
+                        :admin-p admin-p
+                        :poster-p (or admin-p poster-p)))
       (render-template ".settings.tmpl" plist
                        :add-index-comment-links-p t
                        :data-db db))))

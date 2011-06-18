@@ -16,7 +16,7 @@
         <th>Home page:</th>
         <td><input type="text" name="homepage" size="40" value="<!-- TMPL_VAR homepage -->"/></td>
       </tr><tr>
-        <th>About:</th>
+        <th>About: <span class="form-required">*</span></th>
         <td><textarea wrap="virtual" cols="80" rows="10" name="about"><!-- TMPL_VAR about --></textarea>
         </td>
       </tr><tr><!-- TMPL_IF new-user-p --><!-- TMPL_ELSE -->
@@ -27,14 +27,15 @@
         <th>Old password:</th>
         <td><input type="password" name="oldpass" size="40"/></td><!-- /TMPL_IF -->
       </tr><tr><!-- /TMPL_IF --><!-- TMPL_IF new-user-p -->
-        <th>Password:</th><!-- TMPL_ELSE -->
+        <th>Password: <span class="form-required">*</span></th><!-- TMPL_ELSE -->
         <th>New password:</th><!-- /TMPL_IF  -->
         <td><input type="password" name="newpass" size="40"/></td>
       </tr><tr>
-        <th>Repeat:</th>
+        <th>Repeat:<!-- TMPL_IF new-user-p --> <span class="form-required">*</span><!-- /TMPL_IF --></th>
         <td><input type="password" name="newpass2" size="40"/></td>
       </tr>
     </table>
-    <input type="submit" name="submit" value="Submit"/>
+    <input type="submit" name="submit" value="Submit"/><!-- TMPL_IF delete-p -->
+    <input type="submit" name="delete" value="Delete"/><!-- /TMPL_IF -->
   </form>
 </div>
