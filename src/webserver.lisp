@@ -1153,6 +1153,8 @@
          (homepage (getf comment :homepage))
          (status (getf comment :status))
          captcha-explanation captcha-query captcha-response-size captcha-hidden)
+    (when (and user (not comment-num))
+      (setf uid session-uid))
     (when (and (blankp author) user)
       (setf author (getf user :name)))
     (when (and user (not comment-num))
@@ -1286,6 +1288,9 @@
     (when comment
       (when (blankp author) (setf author (getf comment :name)))
       (when (blankp email) (setf email (getf comment :mail))))
+    (when user
+      (when (blankp author) (setf author (getf user :name)))
+      (when (blankp email) (setf email (getf user :mail))))
     (cond ((blankp author)
            (setf errmsg "Name may not be blank"))
           ((blankp body)
