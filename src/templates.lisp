@@ -689,7 +689,12 @@
            (my-links (multiple-value-bind (y m)
                          (decode-ymd (getf (car node-plists) :created))
                        (compute-months-and-years-link-plist y m data-db)))
-           (plist `(:posts ,node-plists ,@my-links))
+           (plist `(:posts ,node-plists
+                    :header-links ((:rel "alternate"
+                                    :type "application/rss+xml"
+                                    :title "RSS 2.0"
+                                    :href "<!-- TMPL_VAR home -->/rss.xml"))
+                    ,@my-links))
            (post-template-name (get-post-template-name data-db))
            (file-name "index.html"))
       (setf (getf plist :home) ".")
