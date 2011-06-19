@@ -426,6 +426,7 @@
          errmsg
          newpass-p
          new-homepage
+         new-homepage-p
          new-email-p
          email-changed-p
          new-email
@@ -494,7 +495,8 @@
         (when (blankp homepage) (setf homepage nil))
         (unless (equal homepage (getf user :homepage))
           (setf (getf user :homepage) homepage
-                new-homepage homepage))
+                new-homepage homepage
+                new-homepage-p t))
         (when (blankp about)
           (setf errmsg "Please tell me something about yourself."))
         (unless (equal about (getf user :about))
@@ -515,7 +517,7 @@
                        (setf errmsg
                              (format nil "Cannot send email to ~a: ~a" email c)))))))
         (cond ((and (not errmsg)
-                    (or newpass-p new-homepage new-email-p
+                    (or newpass-p new-homepage-p new-email-p
                         email-changed-p new-about-p))
                (setf (getf user :password-recovery) nil
                      (read-user (getf user :uid) db) user)
@@ -535,6 +537,7 @@
                                                 (format nil "~a's" username))
                                   :newpass-p newpass-p
                                   :new-homepage (efh new-homepage)
+                                  :new-homepage-p new-homepage-p
                                   :new-about-p new-about-p
                                   :new-email (efh new-email)
                                   :new-email-p new-email-p
