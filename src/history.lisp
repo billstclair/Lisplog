@@ -7,12 +7,15 @@
 
 (in-package :lisplog)
 
+(defun downcase-string-hash (string)
+  (md5 (string-downcase string)))
+
 (defun read-usernamehash (username &optional (db *data-db*))
-  (let ((hash (md5 username)))
+  (let ((hash (downcase-string-hash username)))
     (data-get $USERNAMEHASH hash :db db)))
 
 (defun (setf read-usernamehash) (value username &optional (db *data-db*))
-  (let ((hash (md5 username)))
+  (let ((hash (downcase-string-hash username)))
     (setf (data-get $USERNAMEHASH hash :db db) value)))
 
 (defun add-user-to-usernamehash (user &optional (db *data-db*))
@@ -28,7 +31,7 @@
   (let ((uids (read-usernamehash username db)))
     (dolist (uid uids)
       (let ((user (read-user uid db)))
-        (when (and user (equal username (getf user :name)))
+        (when (and user (equalp username (getf user :name)))
           (return user))))))
 
 (defun remove-username-from-usernamehash (username uid &optional (db *data-db*))
@@ -36,11 +39,11 @@
     (setf (read-usernamehash username db) uids)))
 
 (defun read-emailhash (email &optional (db *data-db*))
-  (let ((hash (md5 (string-downcase email))))
+  (let ((hash (downcase-string-hash email)))
     (data-get $EMAILHASH hash :db db)))
 
 (defun (setf read-emailhash) (value email &optional (db *data-db*))
-  (let ((hash (md5 (string-downcase email))))
+  (let ((hash (downcase-string-hash email)))
     (setf (data-get $EMAILHASH hash :db db) value)))
 
 (defun add-user-to-emailhash (user &optional (db *data-db*))
@@ -57,7 +60,7 @@
   (let ((uids (read-emailhash email db)))
     (dolist (uid uids)
       (let ((user (read-user uid db)))
-        (when (and user (equal email (string-downcase (getf user :mail))))
+        (when (and user (equalp email (getf user :mail)))
           (return user))))))
 
 (defun remove-email-from-emailhash (email uid &optional (db *data-db*))

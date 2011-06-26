@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage is: "lisplog [slimeport] [http_port]"
+# Usage is: "lisplog [slimeport] [data-db]"
 ccl -R 200M \
     -e '(load "start.lisp")' \
     -e '(in-package :ll)' \
