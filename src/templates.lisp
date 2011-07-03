@@ -730,6 +730,7 @@
                                    :categories categories
                                    :pubdate pubdate)))
            (plist (list :base-url base-url
+                        :link base-url
                         :blog-title blog-title
                         :blog-description blog-description
                         :blog-editor blog-editor
@@ -800,12 +801,14 @@
                              :data-db data-db))
       (render-category-rss
        cat
-       :alias rss-alias
+       :alias alias
+       :rss-alias rss-alias
        :data-db data-db :site-db site-db
        :node-plists node-plists)
       file-name)))
 
-(defun render-category-rss (cat &key alias (data-db *data-db*) (site-db *site-db*)
+(defun render-category-rss (cat &key alias rss-alias
+                            (data-db *data-db*) (site-db *site-db*)
                             (node-plists (get-node-plists-for-category cat data-db)))
   (when (integerp cat)
     (setf cat (read-category cat data-db)))
@@ -813,10 +816,12 @@
   (with-settings (data-db)
     (let* ((name (getf cat :name))
            (blog-title (efh (format nil "~a | ~a" name (get-setting :site-name))))
-           (alias (or alias (fsdb:str-replace
-                             ".html" ".xml" (category-alias cat))))
-           (rss-file-name (format nil "categories/~a" alias))
-           (base-url (efh (format nil "~a~a" (get-setting :site-url) rss-file-name)))
+           (alias (or alias (category-alias cat)))
+           (file-name (format nil "categories/~a" alias))
+           (rss-alias (or rss-alias (fsdb:str-replace ".html" ".xml" alias)))
+           (rss-file-name (format nil "categories/~a" rss-alias))
+           (base-url (get-setting :site-url))
+           (link (efh (format nil "~a~a" base-url file-name)))
            (blog-description (efh (getf cat :description)))
            (blog-editor (efh (get-setting :site-editor)))
            (items (loop for plist in node-plists
@@ -830,7 +835,8 @@
                                    :description description
                                    :categories categories
                                    :pubdate pubdate)))
-           (plist (list :base-url base-url
+           (plist (list :base-url (efh base-url)
+                        :link link
                         :blog-title blog-title
                         :blog-description blog-description
                         :blog-editor blog-editor
