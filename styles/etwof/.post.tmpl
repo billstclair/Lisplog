@@ -8,7 +8,7 @@
                <span class="categories">
                  <!-- TMPL_LOOP category-info -->
                   &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR prev-url -->" title="Previous post in category">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
-                  <span title="<!-- TMPL_VAR cat-desc -->"><!-- TMPL_VAR cat-name --></span>
+                  <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR cat-link -->" title="<!-- TMPL_VAR cat-desc -->"><!-- TMPL_VAR cat-name --></a>
                   <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR next-url -->" title="Next post in category">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
                   <!-- /TMPL_LOOP -->
                </span>

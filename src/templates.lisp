@@ -78,7 +78,10 @@
 ;;;
 
 (defun get-setting (key &optional (settings *settings*))
-  (getf settings key))
+  (if settings
+      (getf settings key)
+      ;; DWIM a bad idea here?
+      (with-settings () (get-setting key))))
 
 (defun (setf get-setting) (value key &optional (settings *settings*))
   (setf (getf settings key) value))
@@ -534,6 +537,7 @@
      for (cat (prev . next)) on neighbors by #'cddr
      for cat-plist = (read-category cat db)
      for cat-name = (getf cat-plist :name)
+     for cat-link = (format nil "categories/~a" (category-alias cat-plist))
      for cat-desc = (or (getf cat-plist :description) cat-name)
      for prev-url = (unless (eql prev nid)
                       (car (getf (read-node prev db) :aliases)))
@@ -543,6 +547,7 @@
                           (car (getf (read-node next db) :aliases))))
      when cat-name collect
        `(:cat-name ,cat-name
+         :cat-link ,cat-link
          :cat-desc ,cat-desc
          :prev-url ,prev-url
          :next-url ,next-url)))
@@ -686,9 +691,10 @@
 (defun render-site-index (&key (data-db *data-db*) (site-db *site-db*))
   (with-settings (data-db)
     (let* ((node-plists (get-node-plists-for-index-page data-db))
-           (my-links (multiple-value-bind (y m)
-                         (decode-ymd (getf (car node-plists) :created))
-                       (compute-months-and-years-link-plist y m data-db)))
+           (my-links (when node-plists
+                       (multiple-value-bind (y m)
+                           (decode-ymd (getf (car node-plists) :created))
+                         (compute-months-and-years-link-plist y m data-db))))
            (plist `(:posts ,node-plists
                     :header-links ((:rel "alternate"
                                     :type "application/rss+xml"
@@ -733,7 +739,134 @@
            (rss-file-name (or (get-setting :rss-file-name) "rss.xml")))
       (setf (fsdb:db-get site-db rss-file-name)
             (fill-and-print-to-string template plist))
-      rss-file-name)))          
+      rss-file-name)))
+
+(defun category-alias (cat)
+  (compute-alias-from-title (getf cat :name)))
+
+(defun get-node-plists-for-category (cat &optional (db *data-db*))
+  (when (integerp cat)
+    (setf cat (read-category cat db)))
+  (with-settings (db)
+    (let* ((catnodes (read-catnodes (getf cat :tid) db))
+           (post-count (get-setting :home-page-post-count))
+           (res nil))
+      (dolist (node.time catnodes)
+        (let ((node (read-node (car node.time) db)))
+          (when (and (eql 1 (getf node :promote))
+                     (eql 1 (getf node :status)))
+            (let* ((plist (make-node-plist node :comments-p nil :data-db db)))
+              (setf (getf plist :permalink) (car (getf plist :aliases)))
+              (let ((cnt 0))
+                (dolist (comment-num (getf plist :comments))
+                  (let ((comment-plist (read-comment comment-num db)))
+                    (when (eql 0 (getf comment-plist :status))
+                      (incf cnt))))
+                (when (> cnt 0)
+                  (setf (getf plist :comment-count)
+                        (if (eq cnt 1)
+                            "1 comment"
+                            (format nil "~d comments" cnt)))))
+                 (push plist res)
+                 (when (<= (decf post-count) 0)
+                   (return))))))
+      (nreverse res))))
+
+(defun render-category-page (cat &key (data-db *data-db*) (site-db *site-db*))
+  (when (integerp cat)
+    (setf cat (read-category cat data-db)))
+  (unless cat (return-from render-category-page))
+  (with-settings (data-db)
+    (let* ((node-plists (get-node-plists-for-category cat data-db))
+           (alias (category-alias cat))
+           (rss-alias (fsdb:str-replace ".html" ".xml" alias))
+           (my-links (when node-plists
+                       (multiple-value-bind (y m)
+                           (decode-ymd (getf (car node-plists) :created))
+                         (compute-months-and-years-link-plist y m data-db))))
+           (plist `(:posts ,node-plists
+                    :page-title ,(getf cat :name)
+                    :header-links ((:rel "alternate"
+                                    :type "application/rss+xml"
+                                    :title "RSS 2.0"
+                                    :href ,rss-alias))
+                    ,@my-links))
+           (post-template-name (get-post-template-name data-db))
+           (file-name (format nil "categories/~a" alias)))
+      (setf (getf plist :home) "..")
+      (setf (fsdb:db-get site-db file-name)
+            (render-template post-template-name plist
+                             :add-index-comment-links-p t
+                             :data-db data-db))
+      (render-category-rss
+       cat
+       :alias rss-alias
+       :data-db data-db :site-db site-db
+       :node-plists node-plists)
+      file-name)))
+
+(defun render-category-rss (cat &key alias (data-db *data-db*) (site-db *site-db*)
+                            (node-plists (get-node-plists-for-category cat data-db)))
+  (when (integerp cat)
+    (setf cat (read-category cat data-db)))
+  (unless cat (return-from render-category-rss))
+  (with-settings (data-db)
+    (let* ((name (getf cat :name))
+           (blog-title (efh (format nil "~a | ~a" name (get-setting :site-name))))
+           (alias (or alias (fsdb:str-replace
+                             ".html" ".xml" (category-alias cat))))
+           (rss-file-name (format nil "categories/~a" alias))
+           (base-url (efh (format nil "~a~a" (get-setting :site-url) rss-file-name)))
+           (blog-description (efh (getf cat :description)))
+           (blog-editor (efh (get-setting :site-editor)))
+           (items (loop for plist in node-plists
+                     for title = (efh (getf plist :title))
+                     for link = (efh (strcat base-url (getf plist :permalink)))
+                     for description = (efh (getf plist :body))
+                     for categories = nil ;do this once we have URLs for categories
+                     for pubdate = (getf plist :post-date)
+                     collect (list :title title
+                                   :link link
+                                   :description description
+                                   :categories categories
+                                   :pubdate pubdate)))
+           (plist (list :base-url base-url
+                        :blog-title blog-title
+                        :blog-description blog-description
+                        :blog-editor blog-editor
+                        :items items))
+           (template-name (or (get-setting :rss-template) ".rss.tmpl"))
+           (template (get-style-file template-name data-db)))
+      (setf (fsdb:db-get site-db rss-file-name)
+            (fill-and-print-to-string template plist))
+      rss-file-name)))
+
+(defun render-categories-index (&key (data-db *data-db*) (site-db *site-db*))
+  (let ((categories nil))
+    (do-categories (cat data-db)
+      (let* ((name (getf cat :name))
+             (description (getf cat :description))
+             (link (category-alias cat))
+             (rss-link (fsdb:str-replace ".html" ".xml" link)))
+        (push (list :name name
+                    :description description
+                    :link link
+                    :rss-link rss-link)
+              categories)))
+    (setf categories (sort categories #'string<
+                           :key (lambda (x) (getf x :name))))
+    (let ((plist (list :categories categories
+                       :base "..")))
+      (setf (fsdb:db-get site-db "categories/index.html")
+            (render-template ".categories.tmpl" plist
+                             :data-db data-db)))
+    nil))
+
+(defun render-all-category-pages (&key (data-db *data-db*) (site-db *site-db*))
+  (do-categories (cat data-db)
+    (render-category-page cat :data-db data-db :site-db site-db))
+  (render-categories-index :data-db data-db :site-db site-db))
+
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

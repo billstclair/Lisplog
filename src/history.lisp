@@ -471,6 +471,7 @@ as integers."
               (dolist (info (get-month-post-info year month :db db))
                 (rendering (render-node (car info) :data-db db :site-db site-db))
                 (incf count)))))
+        (rendering (render-all-category-pages :data-db db :site-db site-db))
         (rendering (render-site-index :data-db db :site-db site-db))))
     count))
 

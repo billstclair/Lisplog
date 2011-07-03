@@ -1,16 +1,19 @@
 Dynamic server
 ==============
 
+Comments RSS feed. New icons: images/rss-32.png, images/comment-rss-32.png
+
+Link to year and next and previous months on months pages, top and bottom of page.
+Link to next and previous years on years pages, top and bottom of page.
+
 If http:// is left off of a home page in a comment, add it.
 
 Maximum length for node aliases (site file names).
 
-Categories page, linked from the category name on each post, containing the last 10 posts in each category. Add to RSS feed.
-
 "Hold" column ("H") on Comments Moderation page. Let users moderate their own
 unpublished comments.
 
-Comments RSS feed. New icons: images/rss-32.png, images/comment-rss-32.png
+lisplog.org/blog
 
 Twitter integration: account & post
 
@@ -27,6 +30,3 @@ Dynamic serving. Is it faster? Is it faster if I preload the data?
 
 New users/moderation
 Change/initialize settings
-
-Categories
-  Launch page for last post in all categories
