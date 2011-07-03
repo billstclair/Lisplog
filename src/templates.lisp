@@ -785,7 +785,9 @@
                        (multiple-value-bind (y m)
                            (decode-ymd (getf (car node-plists) :created))
                          (compute-months-and-years-link-plist y m data-db))))
-           (plist `(:posts ,node-plists
+           (plist `(:base ,(get-setting :site-url)
+                    :home ,"."
+                    :posts ,node-plists
                     :page-title ,(getf cat :name)
                     :header-links ((:rel "alternate"
                                     :type "application/rss+xml"
@@ -794,7 +796,6 @@
                     ,@my-links))
            (post-template-name (get-post-template-name data-db))
            (file-name (format nil "categories/~a" alias)))
-      (setf (getf plist :home) "..")
       (setf (fsdb:db-get site-db file-name)
             (render-template post-template-name plist
                              :add-index-comment-links-p t
@@ -862,7 +863,7 @@
     (setf categories (sort categories #'string<
                            :key (lambda (x) (getf x :name))))
     (let ((plist (list :categories categories
-                       :base "..")))
+                       :home "..")))
       (setf (fsdb:db-get site-db "categories/index.html")
             (render-template ".categories.tmpl" plist
                              :data-db data-db)))
