@@ -920,7 +920,8 @@
      for (cat (prev . next)) on cat-neighbors by #'cddr
      do
        (setf (read-catnodes cat data-db)
-             (delete nid (read-catnodes cat data-db)))
+             (delete nid (read-catnodes cat data-db) :key #'car))
+       (render-category-page cat :data-db data-db :site-db site-db)
        (unless (or (eql prev nid) (eql next nid))
          (let* ((prev-node (read-node prev data-db))
                 (prev.next (getf (getf prev-node :cat-neighbors) cat)))
@@ -1000,18 +1001,25 @@
                      (getf node :promote) promote
                      (getf node :body) body
                      (getf node :format) format)))
-      (let ((old-categories
-             (loop for (cat) on (getf node :cat-neighbors) by #'cddr
-                collect cat)))
+      (let* ((old-categories
+              (loop for (cat) on (getf node :cat-neighbors) by #'cddr
+                 collect cat))
+             (old-and-new (union categories old-categories))
+             (render-categories-p nil))
         (unless (and (eql (length old-categories)
                           (length categories))
                      (eql (length old-categories)
-                          (length (union categories old-categories))))
+                          (length old-and-new)))
           (setf node (update-node-categories
                       node categories old-categories
                       :data-db data-db
-                      :site-db site-db))))
-      (setf (read-node nid data-db) node)
+                      :site-db site-db)
+                render-categories-p t))
+        (setf (read-node nid data-db) node)
+        (when render-categories-p
+          (dolist (cat old-and-new)
+            (render-category-page cat :site-db site-db :data-db data-db))
+          (render-categories-index :site-db site-db :data-db data-db)))
       (cond (delete-aliases-p
              (remove-node-from-site node :data-db data-db :site-db site-db)
              (setf alias (format nil "admin/?node=~d" nid)))
