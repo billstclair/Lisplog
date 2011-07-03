@@ -792,7 +792,7 @@
                     :header-links ((:rel "alternate"
                                     :type "application/rss+xml"
                                     :title "RSS 2.0"
-                                    :href ,rss-alias))
+                                    :href ,(format nil "categories/~a" rss-alias)))
                     ,@my-links))
            (post-template-name (get-post-template-name data-db))
            (file-name (format nil "categories/~a" alias)))
