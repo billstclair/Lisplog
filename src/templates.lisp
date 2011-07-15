@@ -696,6 +696,7 @@
                            (decode-ymd (getf (car node-plists) :created))
                          (compute-months-and-years-link-plist y m data-db))))
            (plist `(:posts ,node-plists
+                    :plusone-p ,(get-setting :plusone-p)
                     :header-links ((:rel "alternate"
                                     :type "application/rss+xml"
                                     :title "RSS 2.0"

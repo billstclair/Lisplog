@@ -18,7 +18,8 @@
           <input type="submit" name="btnG" value="Search">
           <input type="hidden" name="domains" value="billstclair.com">
           <input type="hidden" name="sitesearch" value="billstclair.com">
-        </form>
+        </form><!-- TMPL_IF plusone-p -->
+        <div id="plusone"><g:plusone></g:plusone></div><!-- /TMPL_IF -->
       </div>
       <div id="header-content">
         <table>
@@ -66,6 +67,7 @@
       </div>
     </div>
 
-  </div> <!-- back -->
+  </div> <!-- back --><!-- TMPL_IF plusone-p -->
+  <script type="text/javascript" src="https://apis.google.com/js/plusone.js"></script><!-- /TMPL_IF -->
 </body>
 </html>
