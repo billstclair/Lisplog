@@ -11,6 +11,9 @@
 (pushnew (merge-pathnames "cl-crypto/" *lisplog-home*)
          asdf:*central-registry*
          :test #'equal)
+(pushnew (merge-pathnames "limited-thread-taskmaster/" *lisplog-home*)
+         asdf:*central-registry*
+         :test #'equal)
 
 (asdf:defsystem :lisplog
   :description "Simple blogging in Common Lisp"
@@ -20,7 +23,7 @@
   :depends-on (fsdb cl-crypto           ;local
                md5 anaphora html-template cl-fad cl-ppcre
                split-sequence bordeaux-threads hunchentoot
-               eager-future cl-base64 cl-smtp)
+               limited-thread-taskmaster cl-base64 cl-smtp)
   :components
   ((:module src
     :serial t
@@ -36,7 +39,6 @@
      (:file "csv")
      (:file "sessions")
      (:file "captcha")
-     (:file "taskmaster")
      (:file "webserver")
      ))))
 

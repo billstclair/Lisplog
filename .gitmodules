@@ -1,0 +1,3 @@
+[submodule "limited-thread-taskmaster"]
+	path = limited-thread-taskmaster
+	url = git://github.com/billstclair/limited-thread-taskmaster.git

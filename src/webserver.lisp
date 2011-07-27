@@ -241,11 +241,35 @@
     (write-session session db)
     session))
 
+(defun password-to-pass.iv (password)
+  (multiple-value-bind (pass iv) (cl-crypto:aes-encrypt-string password password)
+    (cons pass iv)))
+
+(defun validate-password (user password &optional (db *data-db*))
+  (cond ((stringp user)
+         (setf user (or (get-user-by-name user db)
+                        (get-user-by-email user db)
+                        (error "No user named: ~s" user))))
+        ((integerp user)
+         (setf user (or (read-user user db)
+                        (error "No user number: ~s" user)))))
+  (let ((pass (getf user :pass))
+        (pass.iv (getf user :pass.iv)))
+    (cond (pass
+           (when (equal (md5 password) pass)
+             (setf (getf user :pass.iv) (password-to-pass.iv password))
+             (remf user :pass)
+             (setf (read-user (getf user :uid) db) user)
+             t))
+          (pass.iv
+           (destructuring-bind (pass . iv) pass.iv
+             (equal pass (cl-crypto:aes-encrypt-string password password :iv iv)))))))
+
 (defun login (query-string username password uri https)
   (let* ((db (get-port-db))
          (user (get-user-by-name username db)))
     (cond ((not (and user
-                     (equal (md5 password) (getf user :pass))))
+                     (validate-password user password db)))
            (login-screen uri https
                          :errmsg "Unknown user or wrong password"
                          :username username
@@ -486,11 +510,11 @@
         (unless (or errmsg (blankp newpass))
           (cond ((and require-old-password-p
                       (not new-user-p)
-                      (not (equal (md5 oldpass) (getf user :pass))))
+                      (validate-password user oldpass db))
                  (setf errmsg "Old password incorrect."))
                 ((not (equal newpass newpass2))
                  (setf errmsg "New password mismatch."))
-                (t (setf (getf user :pass) (md5 newpass)
+                (t (setf (getf user :pass.iv) (password-to-pass.iv newpass)
                          newpass-p t))))
         (when (blankp homepage) (setf homepage nil))
         (unless (equal homepage (getf user :homepage))
