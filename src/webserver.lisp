@@ -241,9 +241,12 @@
     (write-session session db)
     session))
 
-(defun password-to-pass.iv (password)
-  (multiple-value-bind (pass iv) (cl-crypto:aes-encrypt-string password password)
-    (cons pass iv)))
+(defun password-to-pass.iv (password &optional iv)
+  (multiple-value-bind (pass iv)
+      (if iv
+          (cl-crypto:aes-encrypt-string password password :iv iv)
+          (cl-crypto:aes-encrypt-string password password))
+    (cons (cl-crypto:sha1 pass) iv)))
 
 (defun validate-password (user password &optional (db *data-db*))
   (cond ((stringp user)
@@ -263,7 +266,7 @@
              t))
           (pass.iv
            (destructuring-bind (pass . iv) pass.iv
-             (equal pass (cl-crypto:aes-encrypt-string password password :iv iv)))))))
+             (equal pass (car (password-to-pass.iv password iv))))))))
 
 (defun login (query-string username password uri https)
   (let* ((db (get-port-db))
