@@ -1468,6 +1468,10 @@
 ;; <baseurl>/admin/settings
 (defun settings (uri https)
   (let* ((db (get-port-db))
+         (start-time (universal-to-unix-time (start-time-of (get-port-acceptor))))
+         (now (get-unix-time))
+         (start-string (unix-time-to-rfc-1123-string start-time))
+         (uptime-string (time-ago start-time now nil))
          (session hunchentoot:*session*)
          (uid (uid-of session))
          (user (read-user uid db))
@@ -1482,7 +1486,9 @@
       (setf plist (list :home home
                         :base base
                         :admin-p admin-p
-                        :poster-p (or admin-p poster-p)))
+                        :poster-p (or admin-p poster-p)
+                        :start-time start-string
+                        :uptime uptime-string))
       (render-template ".settings.tmpl" plist
                        :add-index-comment-links-p t
                        :data-db db))))

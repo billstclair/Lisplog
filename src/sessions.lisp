@@ -160,7 +160,8 @@
   ())
 
 (defclass lisplog-acceptor (limited-thread-taskmaster:limited-thread-acceptor)
-  ()
+  ((start-time :initform (get-universal-time)
+               :accessor start-time-of))
   (:default-initargs
    :request-class 'lisplog-request))
 

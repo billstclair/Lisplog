@@ -630,8 +630,9 @@
                    (return))))))
       (nreverse res))))
 
-(defun time-ago (time &optional (now (get-unix-time)))
-  (let ((diff (- now time)))
+(defun time-ago (time &optional (now (get-unix-time)) (include-ago-p t))
+  (let ((diff (- now time))
+        (ago-string (if include-ago-p " ago" "")))
     (flet ((maybe-s (x) (if (eql x 1) "" "s")))
       (multiple-value-bind (mins secs) (floor diff 60)
         (multiple-value-bind (hours mins) (floor mins 60)
@@ -644,32 +645,36 @@
                      (when (eql days 7)
                        (incf weeks)
                        (setf days 0))
-                     (format nil "~d week~a ~d day~a ago"
+                     (format nil "~d week~a ~d day~a~a"
                              weeks (maybe-s weeks)
-                             days  (maybe-s days)))
+                             days  (maybe-s days)
+                             ago-string))
                     ((> days 0)
                      (when (> secs 30) (incf mins))
                      (when (> mins 30) (incf hours))
                      (when (eql hours 24)
                        (incf days)
                        (setf hours 0))
-                     (format nil "~d day~a ~d hour~a ago"
+                     (format nil "~d day~a ~d hour~a~a"
                              days (maybe-s days)
-                             hours  (maybe-s hours)))
+                             hours  (maybe-s hours)
+                             ago-string))
                     ((> hours 0)
                      (when (> secs 30) (incf mins))
                      (when (eql mins 60)
                        (incf hours)
                        (setf mins 0))
-                     (format nil "~d hour~a ~d minute~a ago"
+                     (format nil "~d hour~a ~d minute~a~a"
                              hours (maybe-s hours)
-                             mins  (maybe-s mins)))
+                             mins  (maybe-s mins)
+                             ago-string))
                     ((> mins 0)
-                     (format nil "~d minute~a ~d second~a ago"
+                     (format nil "~d minute~a ~d second~a~a"
                              mins (maybe-s mins)
-                             secs  (maybe-s secs)))
-                    (t (format nil "~d second~a ago"
-                               secs  (maybe-s secs)))))))))))  
+                             secs  (maybe-s secs)
+                             ago-string))
+                    (t (format nil "~d second~a~a"
+                               secs  (maybe-s secs) ago-string))))))))))
 
 (defun get-comment-plists-for-index-page (&optional (db *data-db*))
   (with-settings (db)
