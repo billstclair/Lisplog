@@ -423,7 +423,7 @@ as integers."
             (append plist (compute-months-and-years-link-plist year month db)))
       (setf (getf plist :page-title) month-name)
       (setf (fsdb:db-get site-db month-link)
-            (render-template (get-month-template db) plist))
+            (render-template (get-month-template db) plist :data-db db))
       month-link)))
 
 (defun render-year-page (year &key (db *data-db*) (site-db *site-db*))
@@ -434,7 +434,7 @@ as integers."
           (append plist (compute-months-and-years-link-plist year nil db)))
     (setf (getf plist :page-title) year-string)
     (setf (fsdb:db-get site-db url)
-          (render-template (get-year-template db) plist))
+          (render-template (get-year-template db) plist :data-db db))
     url))
 
 (defun update-node-year-and-month-pages (node &key

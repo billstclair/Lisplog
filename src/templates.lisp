@@ -39,7 +39,7 @@
 ;;;
 
 ;; Bound during template operations
-(defvar *settings* nil)
+(defvar *settings*)                     ;intentionally unbound
 
 (defmacro with-settings ((&optional data-db) &body body)
   (let ((thunk (gensym "THUNK")))
@@ -48,7 +48,8 @@
        (call-with-settings #',thunk ,data-db))))
 
 (defun call-with-settings (thunk data-db)
-  (funcall thunk (or *settings* (read-settings data-db))))
+  (funcall thunk (or (and (boundp '*settings*) *settings*)
+                     (read-settings data-db))))
 
 (defun get-style-file (file &optional (db *data-db*))
   (with-settings (db)
@@ -77,14 +78,11 @@
 ;;; Settings
 ;;;
 
-(defun get-setting (key &optional (settings *settings*))
-  (if settings
-      (getf settings key)
-      ;; DWIM a bad idea here?
-      (with-settings () (get-setting key))))
+(defun get-setting (key)
+  (getf *settings* key))
 
-(defun (setf get-setting) (value key &optional (settings *settings*))
-  (setf (getf settings key) value))
+(defun (setf get-setting) (value key)
+  (setf (getf *settings* key) value))
 
 (defun read-settings (&optional data-db)
   (unless data-db
@@ -466,9 +464,10 @@
 (defparameter *block-nums-key* :block-nums)
 
 ;; May eventually use more than the HTML property of each block
-(defun get-blocks (&optional (settings *settings*))
-  (loop for block-num in (getf settings *block-nums-key*)
-     collect (data-get $BLOCKS block-num)))
+(defun get-blocks (&optional (db *data-db*))
+  (with-settings (db)
+    (loop for block-num in (get-setting *block-nums-key*)
+       collect (data-get $BLOCKS block-num :db db))))
 
 (defun fetch-comments (numbers &optional (*data-db* *data-db*))
   (unless (listp numbers)
@@ -499,7 +498,7 @@
   (when add-index-comment-links-p
     (setf (getf plist :recent-comments)
           (get-comment-plists-for-index-page data-db)))
-  (with-settings ()
+  (with-settings (data-db)
     (let* ((template (get-style-file template-name data-db))
            (*block-nums-key* (if add-index-comment-links-p
                                  :index-block-nums
@@ -508,7 +507,7 @@
             (get-style-file (or index-template-name *style-index-file*) data-db)))
       (unless (getf plist :home) (setf (getf plist :home) "."))
       (setf plist
-            `(:blocks ,(get-blocks)
+            `(:blocks ,(get-blocks data-db)
               :page-content ,(fill-and-print-to-string template plist)
                ,@(compute-months-and-years-link-plist month year data-db)
                ,@plist
@@ -679,7 +678,8 @@
 (defun get-comment-plists-for-index-page (&optional (db *data-db*))
   (with-settings (db)
     (let ((comments (last-n-active-comments
-                     (or (get-setting :previous-comment-count) 10)))
+                     (or (get-setting :previous-comment-count) 10)
+                     db))
           (now (get-unix-time)))
       (loop for comment in comments
          for subject = (getf comment :subject)

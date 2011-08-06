@@ -13,6 +13,9 @@ Maximum length for node aliases (site file names).
 "Hold" column ("H") on Comments Moderation page. Let users moderate their own
 unpublished comments.
 
+Layouts for mobile browsers:
+  http://www.rkblog.rk.edu.pl/w/p/optimizing-websites-iphone-and-android/
+
 lisplog.org/blog
 
 Twitter integration: account & post
@@ -28,5 +31,6 @@ Plug-in architecture, including adding new formats (text -> html)
 Re-render subsets of the site or whole site.
 Dynamic serving. Is it faster? Is it faster if I preload the data?
 
-New users/moderation
 Change/initialize settings
+
+A page with the IP addresses of all domains linked in all posts, tracking history.
