@@ -791,8 +791,7 @@
                        (multiple-value-bind (y m)
                            (decode-ymd (getf (car node-plists) :created))
                          (compute-months-and-years-link-plist y m data-db))))
-           (plist `(:base ,(get-setting :site-url)
-                    :home ,"."
+           (plist `(:home ,".."
                     :posts ,node-plists
                     :page-title ,(getf cat :name)
                     :header-links ((:rel "alternate"
