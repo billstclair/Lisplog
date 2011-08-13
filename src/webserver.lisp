@@ -990,6 +990,7 @@
           (delete-aliases-p nil)
           (nid (getf node :nid))
           new-alias)
+      (declare (ignorable new-alias-p))
       (setf new-alias (compute-new-alias node title alias
                                          :data-db data-db
                                          :site-db site-db))
