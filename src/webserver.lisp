@@ -356,7 +356,7 @@
                         :url url
                         :site-name site-name))
            (message (fill-and-print-to-string
-                     (get-style-file ".registration-email.tmpl")
+                     (get-style-file ".registration-email.tmpl" db)
                      plist)))
       (cl-smtp:send-email host from to subject message
                           :display-name site-name))))
@@ -376,7 +376,7 @@
                         :email email
                         :site-name site-name))
            (message (fill-and-print-to-string
-                     (get-style-file ".email-change-email.tmpl")
+                     (get-style-file ".email-change-email.tmpl" db)
                      plist)))
       (cl-smtp:send-email host from to subject message
                           :display-name site-name))))
@@ -436,7 +436,7 @@
                             :text text
                             :url url))
                (message (fill-and-print-to-string
-                         (get-style-file ".notification-email.tmpl")
+                         (get-style-file ".notification-email.tmpl" db)
                          plist)))
           (cl-smtp:send-email host from to subject message
                               :display-name site-name))))))
@@ -1676,7 +1676,7 @@
                         :email email
                         :site-name site-name))
            (message (fill-and-print-to-string
-                     (get-style-file ".forgot-password-email.tmpl")
+                     (get-style-file ".forgot-password-email.tmpl" db)
                      plist)))
       (setf (getf user :forgot-password-seed) seed
             (read-user (getf user :uid) db) user)

@@ -48,8 +48,7 @@
        (call-with-settings #',thunk ,data-db))))
 
 (defun call-with-settings (thunk data-db)
-  (funcall thunk (or (and (boundp '*settings*) *settings*)
-                     (read-settings data-db))))
+  (funcall thunk (read-settings data-db)))
 
 (defun get-style-file (file &optional (db *data-db*))
   (with-settings (db)
