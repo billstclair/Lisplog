@@ -1,6 +1,7 @@
 *.bz2
 *.csv
 *.gz
-data/
-site/
+*data/
+*site/
 blog/
+csv/

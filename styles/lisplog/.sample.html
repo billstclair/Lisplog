@@ -1,0 +1,81 @@
+<!--?xml version="1.0" encoding="UTF-8" ?-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <meta http-equiv="Content-Style-Type" content="text/css"/><!-- TMPL_IF base -->
+    <!-- base href="<!-- TMPL_VAR base -- >"/--><!-- /TMPL_IF -->
+    <link rel="stylesheet" type="text/css" href="css/layout.css"/><!-- TMPL_VAR home /--><!-- TMPL_LOOP header-links -- >
+    <link rel="<!-- TMPL_VAR rel -- >" type="<!-- TMPL_VAR type -- >"<!-- TMPL_IF title -- > title="<!-- TMPL_VAR title -- >"<!-- /TMPL_IF -- > href="<!-- TMPL_VAR href -- >"/><!-- /TMPL_LOOP -->
+  <title><!-- TMPL_IF page-title --><!-- TMPL_VAR page-title --> | <!-- TMPL_VAR site-name --><!-- TMPL_ELSE --><!-- TMPL_VAR site-name --> | <!-- TMPL_VAR site-slogan --><!-- /TMPL_IF --></title>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="title">
+	<h1><a href="" title="Your home">Page title</a></h1>
+	<p class="meta">This is some description</p>
+      </div>
+      <form action="/" method="get" id="searchform">
+	<legend>Search</legend>
+	<p>
+          <input accesskey="s" id="s" name="s" title="Search" type="text"/>
+          <input src="css/magnifier.png" alt="Search" type="image"/>
+        </p>
+      </form>
+    </div>
+		
+    <!-- Body with full length content -->
+    <div class="body">
+      <h2>Welcome</h2>
+      <p>This is some  welcome text to give a brief description of the site. </p>
+    </div>
+    <!-- End body with full length content -->
+		
+    <!-- Body with example post data -->
+    <div class="body">
+      <div class="column two-thirds">
+	<div class="post">
+	  <h2><a href="">Post title</a></h2>
+	  <p class="date">Posted Monday, July 18<sup>th</sup> 2011 by <a href="">Eksith</a>
+	  <span class="meta">&lt==  <a href="">Programming</a> ==></span>
+          </p>
+</p>
+	  <img src="simply-03_files/simplesm.gif" alt="simplesm.gif" class="icon"/>
+	  <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit.</p>
+          <p class="meta">(<a href="">2 Comments</a>).</p>
+	</div>
+
+	<div class="post alt">
+	  <h2><a href="">Etiam tellus quam, tincidunt</a></h2>
+	  <p class="date">Posted Sunday, July 17<sup>th</sup> 2011 by <a href="">Eksith</a>
+	    <span class="meta"><span>&lt;== <a href="">Programming</a> ==></span></p>
+	  <img src="simply-03_files/theworld.gif" alt="theworld.gif" class="icon"/>
+          <p>Cras pellentesque dapibus velit. Duis consequat.</p>
+          <p class="meta">(<a href="">2 Comments</a>).</p>
+	</div>
+				
+	<h5 class="pages">Page : <strong class="curr">1</strong> . <a href="">2</a> . <a href="">3</a> . <a href="">4</a></h5>
+      </div>
+			
+      <div class="column one-third">
+	<h3>Sidebar</h3>
+	<p>This is actually a 1/3rd width column adapted as a sidebar. Now there is no need for a separate "sidebar" class.</p>
+	<h3>Categories</h3>
+	<ul class="list">
+	  <li><a href="">Some site</a></li>
+	  <li><a href="">Sed sit amet dolor</a></li>
+	</ul>
+      </div>
+      <!-- End body with example post data -->
+      <hr>
+
+	<!-- Page footer -->
+	<div class="footer">
+	  <p>Copyright © 2011 Your site. All rights reserved.</p>
+	</div>
+	<!-- End footer -->
+      </div>
+    </div>
+  </body>
+</html>

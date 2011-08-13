@@ -1051,8 +1051,7 @@
              (remove-node-from-site node :data-db data-db :site-db site-db)
              (setf alias (format nil "admin/?node=~d" nid)))
             (t (render-node node :data-db data-db :site-db site-db)))
-      (when new-alias-p
-        (update-node-year-and-month-pages node :data-db data-db :site-db site-db))
+      (update-node-year-and-month-pages node :data-db data-db :site-db site-db)
       ;; Don't always have to do this, but figuring out when
       ;; is harder than just doing it.
       (render-site-index :data-db data-db :site-db site-db)

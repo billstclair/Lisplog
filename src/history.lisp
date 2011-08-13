@@ -132,8 +132,8 @@
                  (when (eql 1 (getf node :status))
                    (setf posts (merge 'list posts `((,nid . ,created))
                                       #'< :key #'cdr)))
-                 (setf (fsdb:db-get db $YEARS ys ms) (prin1-to-string posts))
-                 (values y m)))
+                 (setf (fsdb:db-get db $YEARS ys ms) (prin1-to-string posts)))
+               (values y m))
               (cell
                (setf posts (delete nid posts :key #'car)
                      (fsdb:db-get db $YEARS ys ms) (prin1-to-string posts))
@@ -267,7 +267,8 @@ as integers."
                      (push `(:link ,link :name ,name) res)))))
           (push-plist ny nm)
           (push-plist year month)
-          (push-plist py pm))))))
+          (push-plist py pm)
+          res)))))
 
 (defun year-url (year)
   (format nil "y-~d.html" year))

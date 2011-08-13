@@ -81,12 +81,13 @@
         (cnt 0))
     (loop while (> cid 0)
        for comment = (read-comment cid db)
+       while (< cnt n)
        do
          (when (eql 0 (getf comment :status))
            (push comment res)
-           (when (>= (incf cnt) n)
-             (return (nreverse res))))
-         (decf cid))))    
+           (incf cnt))
+         (decf cid))
+    (nreverse res)))
 
 (defun map-users (function &optional (db *data-db*))
   (map-nodes-or-comments function $USERS db))

@@ -1,0 +1,656 @@
+/*
+Theme Name: Simply
+Theme URI: http://eksith.wordpress.com/2011/07/18/variable-width-columns-in-css/
+Description: A variable width, multi-column theme for simple content display
+Version: 0.3
+Author: Jayanath Rodrigo
+Author URI: http://eksith.wordpress.com
+Tags: fluid, multi column, widgets, readable
+*/
+
+
+
+/* Common */
+body
+{
+	font-family: "Segoe UI" , Tahoma, Sans-Serif;
+	font-weight: normal;
+	font-size: medium;
+	background: #fff;
+	color: #000;
+}
+
+/* Screen */
+@media screen
+{
+	/* Reset */
+	body, div, p, h1, h2, h3, h4, h5, h6, form, fieldset, legend, input, select, ul, li, table, td, th, hr
+	{
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	
+	body
+	{
+		font: normal 90% Sans-serif,tahoma,verdana;
+		text-align: center;
+		padding: 0 0 20px 0;
+		background:#f5f5f5 url(bg.png);
+		color:#000;
+	}
+
+	/* Core elements */
+	div.page
+	{
+		text-align:left;
+		width: 90%;
+		max-width:1200px;
+		min-width:1000px;
+		margin: 10px auto 0 auto;
+	}
+	
+	div.body
+	{
+		clear:both;
+		color:#575757;
+		background:#fff;
+		padding:10px;
+		box-shadow:3px 3px 3px #ddd;
+		/* border:1px solid #ddd; */
+	}
+	
+	div.title
+	{
+		float:left;
+		width:50%;
+		min-height:100px;
+		margin: 0 0 .5em 0;
+	}
+	
+	div.body, div.header
+	{
+		margin:0 0 1em 0;
+	}
+
+	div.footer
+	{
+		text-align:center;
+		font-size:80%;
+	}
+
+	div.post
+	{
+		border-bottom:1px solid #f5f5f5;
+		padding: 0 0 2em 0;
+	}
+	div.alt
+	{
+		background:#f8f8ff;
+	}
+
+	/* Navigation bar */
+	div.nav
+	{
+		min-height: 3em;
+		padding: 0 .8em;
+		margin: .2em 0;
+		clear:both;
+	}
+
+	div.nav ul
+	{
+		list-style:none;
+	}
+
+	div.nav ul li
+	{
+		float: left;
+		position: relative;
+	}
+
+	div.nav ul li a, div.nav ul li span
+	{
+		padding: 6px 10px;
+		display: block;
+		font-size: 120%;
+		color:#575757;
+		text-decoration: none;
+	}
+	
+	div.nav ul li ul
+	{
+		display: none;
+	}
+
+	div.nav ul li:hover ul, div.nav ul li ul:hover
+	{
+		display: block;
+		width: 200px;
+		position: absolute;
+		top: 28px;
+		left: 0;
+		background:#369;
+	}
+	div.nav ul li:hover ul li ul, div.nav ul li ul:hover li ul
+	{
+		display: none;
+	}
+
+	div.nav ul li ul li:hover ul, div.nav ul li ul:hover li ul
+	{
+		display: block;
+		top: 5px;
+		left: 190px;
+	}
+	div.nav ul li ul li
+	{
+		float: none;
+		display: block;
+		position: relative;
+	}
+
+
+	/* Columns */
+	div.column
+	{
+		float:left;
+		margin: 0 2% 0 0;
+		padding: .2em 0;
+	}
+	
+	div.half
+	{
+		width:47%;
+	}
+	
+	div.two-thirds
+	{
+		width:65%;
+	}
+
+	div.one-third
+	{
+		width:31%;
+	}
+
+	div.one-fourth
+	{
+		width:23%;
+	}
+
+	div.one-fifth
+	{
+		width:17%;
+	}
+	
+
+	/* Text elements */
+	h1, h2, h3
+	{
+		padding: .5em;
+		font-weight:normal;
+	}
+	h1
+	{
+		padding: .5em .5em 0 .7em;
+		font-size: 200%;
+	}
+
+	h2
+	{
+		font-size: 150%;
+	}
+	div.post h2, div.post h4
+	{
+		padding: .5em .5em .2em .5em;
+	}
+	h3
+	{
+		font-size: 115%;
+		border-bottom: 1px solid #ddd;
+	}
+
+	h4, h5, h6
+	{
+		padding: .5em .8em;
+	}
+	
+	h4
+	{
+		font-size: 110%;
+	}
+	h5
+	{
+		font-size:100%;
+	}
+	h5.pages
+	{
+		word-spacing: 5px;
+		padding: 20px 10px;
+	}
+	h6
+	{
+		font-size:100%;
+		text-decoration:underline;
+	}
+	
+	a
+	{
+		color: #369;
+	}
+
+	a:hover, ul li.active a
+	{
+		color: #fff;
+		background: #369;
+		text-decoration: none;
+	}
+	
+	div.post a:visited, div.palt a:visited
+	{
+		color:#000;
+		text-decoration:underline;
+	}
+	
+	h1 a {
+		color:#575757;
+		text-decoration:none;
+	}
+	
+	h5.pages a
+	{
+		word-spacing: normal;
+		text-decoration: none;
+	}
+
+	div.nav form a
+	{
+		text-decoration:none;
+		font-size:120%;
+		font-weight:bold;
+	}
+
+	div.nav ul li a:hover, ul li.active a
+	{
+		background:#53879d !important;
+		color: #fff !important;
+	}
+	
+	div.nav ul li ul li a, div.nav ul li.active ul li a
+	{
+		display: block;
+		padding: 6px 10px;
+		position: relative;
+		background:#53879d !important;
+		color:#fff !important;
+		font-size:100%;
+	}
+
+	div.nav ul li ul li a:hover, div.nav ul li.active ul li a:hover
+	{
+		background:#369 !important;
+		color:#fff !important;
+	}
+
+	a.tag
+	{
+		padding: 5px 3px;
+		text-decoration: none;
+	}
+	a.x1
+	{
+		font-size: 11px;
+	}
+	a.x2
+	{
+		font-size: 12px;
+	}
+	a.x3
+	{
+		font-size: 13px;
+	}
+	a.x4
+	{
+		font-size: 14px;
+	}
+	a.x5
+	{
+		font-size: 15px;
+	}
+	a.x6
+	{
+		font-size: 16px;
+	}
+	a.x7
+	{
+		font-size: 17px;
+	}
+	a.x7
+	{
+		font-size: 18px;
+	}
+	a.x8
+	{
+		font-size: 18px;
+	}
+	a.x9
+	{
+		font-size: 19px;
+	}
+	a.x10
+	{
+		font-size: 20px;
+	}
+	a.x11
+	{
+		font-size: 21px;
+	}
+	a.x12
+	{
+		font-size: 22px;
+	}
+	a.x13
+	{
+		font-size: 23px;
+	}
+	a.x14
+	{
+		font-size: 24px;
+	}
+	a.x15
+	{
+		font-size: 25px;
+	}
+	
+	p.meta a, p.date a
+	{
+		text-decoration:none;
+	}
+	
+	h1 a, h2 a, h3 a
+	{
+		text-decoration:none;
+	}
+
+	h1 a:hover, h2 a:hover, h3 a:hover, p.meta a:hover, p.date a:hover
+	{
+		color:#000;
+		background:transparent;
+		text-decoration:underline;
+	}
+
+	div.column h3 a, div.column h3 span
+	{
+		display:block !important;
+		position:absolute;
+		bottom:0;
+		padding:3px;
+		background:#575757;
+		color:#fff;
+	}
+	
+	div.column h3 a:hover
+	{
+		text-decoration:none;
+		background:#000;
+	}
+	
+	ul.list li a
+	{
+		padding: 5px 10px;
+		display: block;
+		text-decoration: none;
+	}
+	
+	div.column ul li a:hover, div.sidebar ul li a:hover
+	{
+		color:#369;
+		background:#f8f8f8;
+	}
+
+	p
+	{
+		padding: .4em .8em;
+		line-height:180%
+	}
+
+	p.tags
+	{
+		line-height: 230%;
+	}
+	
+	form p
+	{
+		padding: .4em 0;
+	}
+	
+	div.body form p
+	{
+		padding: .4em;
+	}
+	
+	p.date, p.meta
+	{
+		font-size: 80%;
+	}
+	
+	div.post p.meta, div.post p.meta 
+	{
+		clear:both;
+		margin: 2em 0 0 0;
+	}
+	
+	p.meta span
+	{
+		float:right;
+		clear:right;
+		max-width:50%;
+	}
+	
+	div.header p.meta
+	{
+		padding: .3em 1.8em;
+	}
+	
+	div.header p.info
+	{
+		padding: .2em 1.5em;
+	}
+
+	p.date
+	{
+		padding:0 .8em 1em .8em;
+	}
+	
+	div.column p
+	{
+		padding: .4em .8em .8em .8em;
+	}
+
+	ul.list, ol.list
+	{
+		list-style:none;
+		margin:0;
+		padding:0;
+	}
+	
+	ul.list li, ol.list li
+	{
+		display:block;
+		margin:.2em 0;
+	}
+	
+	hr
+	{
+		clear:both;
+		color:#fff;
+		background:#fff;
+		height:1px;
+		border:1px solid #ccc;
+		border-width:1px 0 0 0;
+	}
+	
+	div.body hr
+	{
+		height:1px;
+		border:0;
+		margin:0;
+	}
+	
+	/* Form and navigation elements */
+	img
+	{
+		vertical-align:midde;
+	}
+	
+	a img
+	{
+		border:0;
+	}	
+
+	img.icon
+	{
+		float:left;
+		margin: .7em;
+		border:5px solid #f8f8ff;
+	}
+	
+	div.alt img.icon
+	{
+		border-color:#fff;
+	}
+	
+	.left
+	{
+		float:left !important;
+	}
+	.right
+	{
+		float:right !important;
+	}
+
+	form
+	{
+		display: block;
+	}
+	
+	div.header form
+	{
+		float:right;
+		margin: 1em .8em 0 0;
+	}
+	div.nav form, div.header #searchform
+	{
+		float: right;
+		display: inline;
+	}
+	div.nav form
+	{
+		margin:0;
+	}
+	fieldset
+	{
+		padding: 5px;
+		margin: 10px;
+		display: block;
+		border: 5px solid #f5f5f5;
+	}
+	div.nav form fieldset
+	{
+		border: 0;
+		margin:0;
+		padding: 0;
+		display: inline;
+	}
+	div.columns fieldset
+	{
+		padding: 0;
+		margin: 0;
+		border: 0;
+	}
+	
+	div.header fieldset
+	{
+		margin:0;
+		padding:0;
+	}
+
+	legend
+	{
+		font-size: 130%;
+		padding: 5px;
+	}
+	div.header legend
+	{
+		font-size:100% !important;
+	}
+
+	div.columns fieldset legend
+	{
+		padding:0;
+		margin:0;
+		border:0;
+	}
+	
+	input, select, textarea
+	{
+		color: #444;
+	}
+	
+	input[type^='text'], input[type^='password'], select, textarea
+	{
+		padding: 2px;
+		border:1px solid #ddd;
+	}
+	
+	div.body input[type^='text'], div.body input[type^='password'], div.body textarea
+	{
+		display:block;
+	}
+	
+	div.body textarea
+	{
+		width:100%;
+	}
+	
+	div.nav input
+	{
+		font-size: 90%;
+	}
+	select
+	{
+		padding: .1em;
+		margin: 0 .3em;
+		border: 1px solid #777;
+	}
+
+	input[type^='button'], input[type^='submit'], input[type^='reset']
+	{
+		padding: 3px 5px;
+		cursor: pointer;
+		color: #369;
+		font-size: 120%;
+		background: transparent;
+	}
+	
+	div.nav input[type^='button'], div.nav input[type^='submit'], div.nav input[type^='reset']
+	{
+		padding: 6px 10px;
+		font-size:120%;
+		color:#575757;
+	}
+
+	input[type^='button']:hover, input[type^='submit']:hover, input[type^='reset']:hover
+	{
+		background:#53879d;
+		color:#fff !important;
+		cursor:pointer;
+	}
+	label.error
+	{
+		color: #fff;
+		background: #f33;
+		padding: 2px;
+	}
+}
