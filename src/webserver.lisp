@@ -26,13 +26,15 @@
 
 (defun start (&optional (db *data-db*))
   (when db
+    (when (listp db)
+      (return-from start (mapcar 'start db)))
     (when (stringp db) (setf db (fsdb:make-fsdb db)))
     (with-site-db (db)
       (let ((port (or (get-setting :port) (error "No port setting"))))
         (when (get-port-acceptor port)
           (error "Hunchentoot already started"))
+        (setf hunchentoot:*show-lisp-errors-p* t)
         (prog1
-            (setf hunchentoot:*show-lisp-errors-p* t)
           (setf (get-port-acceptor port)
                 (hunchentoot:start
                  (make-instance 'lisplog-acceptor :port port)))
