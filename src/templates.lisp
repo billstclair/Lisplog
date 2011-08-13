@@ -159,7 +159,7 @@
         nid)
     (cond (nid-string (setf nid (parse-integer nid-string)))
           (t
-           (let ((max-nid 0))
+           (let ((max-nid 1))
              (do-nodes (node db)
                (let ((nid (getf node :nid)))
                  (when (and nid (> nid max-nid))
@@ -184,7 +184,7 @@
         cid)
     (cond (cid-string (setf cid (parse-integer cid-string)))
           (t
-           (let ((max-cid 0))
+           (let ((max-cid 1))
              (do-comments (comment db)
                (let ((cid (getf comment :cid)))
                  (when (and cid (> cid max-cid))
@@ -209,7 +209,7 @@
         uid)
     (cond (uid-string (setf uid (parse-integer uid-string)))
           (t
-           (let ((max-uid 0))
+           (let ((max-uid 1))
              (do-users (user db)
                (let ((uid (getf user :uid)))
                  (when (and uid (> uid max-uid))
@@ -337,7 +337,13 @@
        (incf idx)))
 
 (defun eliminate-empty-paragraphs (str)
-  (fsdb:str-replace "<p></p>" "" str))
+  (fsdb:str-replace
+   "</blockquote></p>"
+   "</blockquote>"
+   (fsdb:str-replace
+    "<p><blockquote>"
+    "<blockquote>"
+    (fsdb:str-replace "<p></p>" "" str))))
 
 (defun process-interwiki-references (str)
   (let ((matches nil))
@@ -608,12 +614,15 @@
 (defun get-node-plists-for-index-page (&optional (db *data-db*))
   (with-settings (db)
     (let* ((post-count (get-setting :home-page-post-count))
-           (res nil))
+           (res nil)
+           (oddp nil))
       (do-node-nums-before-time (node-num nil db)
         (let ((node (read-node node-num db)))
           (when (eql 1 (getf node :promote))
             (let* ((plist (make-node-plist node :comments-p nil :data-db db)))
-              (setf (getf plist :permalink) (car (getf plist :aliases)))
+              (setf (getf plist :permalink) (car (getf plist :aliases))
+                    (getf plist :oddp) oddp
+                    oddp (not oddp))
               (let ((cnt 0))
                 (dolist (comment-num (getf plist :comments))
                   (let ((comment-plist (read-comment comment-num db)))
@@ -706,6 +715,7 @@
                                     :type "application/rss+xml"
                                     :title "RSS 2.0"
                                     :href "<!-- TMPL_VAR home -->/rss.xml"))
+                    :show-site-description-p t
                     ,@my-links))
            (post-template-name (get-post-template-name data-db))
            (file-name "index.html"))

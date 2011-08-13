@@ -16,7 +16,7 @@
 (in-package :lisplog)
 
 (defparameter *lisplog-home*
-  cl-user::*lisplog-home*)
+  (asdf:system-relative-pathname "lisplog" ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

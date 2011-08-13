@@ -79,7 +79,8 @@
   (let ((cid (read-cid db))
         (res nil)
         (cnt 0))
-    (loop for comment = (read-comment cid db)
+    (loop while (> cid 0)
+       for comment = (read-comment cid db)
        do
          (when (eql 0 (getf comment :status))
            (push comment res)
