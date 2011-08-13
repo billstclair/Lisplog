@@ -200,7 +200,7 @@ as integers."
 
 (defun get-post-links-before-time (count unix-time &optional (db *data-db*))
   (loop for node-num in (get-node-nums-before-time count unix-time db)
-     for node = (data-get $NODES node-num)
+     for node = (read-node node-num db)
      when node
      collect `(:link ,(car (getf node :aliases))
                      :title ,(getf node :title)
