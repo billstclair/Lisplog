@@ -299,7 +299,7 @@ as integers."
                            10)))
       (when time
         (multiple-value-bind (y m) (decode-ymd time)
-          (let ((posts (get-post-links-before-time link-count time)))
+          (let ((posts (get-post-links-before-time link-count time db)))
             `(,@(compute-months-and-years-link-plist y m db)
                 :recent-posts ,posts)))))))
 
