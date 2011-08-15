@@ -87,13 +87,13 @@
          :response-size 4
          :hidden-value (format nil "~a+~a" time hidden-hash))))))
 
-(defun validate-captcha (res hidden-value)
+(defun validate-captcha (res hidden-value &optional (db *data-db*))
   (check-type res string)
   (check-type hidden-value string)
   (let* ((pos (position #\+ hidden-value))
          (time-str (and pos (subseq hidden-value 0 pos)))
          (timestamp (ignore-errors (parse-integer time-str)))
-         (seed (and timestamp (get-captcha-seed timestamp)))
+         (seed (and timestamp (get-captcha-seed timestamp db)))
          (seed-int (and seed (parse-hex seed)))
          (hidden-hash (and pos (subseq hidden-value (1+ pos))))
          (res-hash (cl-crypto:sha1 res))

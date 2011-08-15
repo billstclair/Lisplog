@@ -29,15 +29,15 @@
     (when (listp db)
       (return-from start (mapcar 'start db)))
     (when (stringp db) (setf db (fsdb:make-fsdb db)))
-    (with-site-db (db)
+    (with-settings (db)
       (let ((port (or (get-setting :port) (error "No port setting"))))
         (when (get-port-acceptor port)
           (error "Hunchentoot already started"))
         (setf hunchentoot:*show-lisp-errors-p* t)
         (prog1
-          (setf (get-port-acceptor port)
-                (hunchentoot:start
-                 (make-instance 'lisplog-acceptor :port port)))
+            (setf (get-port-acceptor port)
+                  (hunchentoot:start
+                   (make-instance 'lisplog-acceptor :port port)))
           (setf (get-port-db port) db))))))
 
 (defun stop (&key port (db *data-db*))
@@ -622,7 +622,7 @@
                (setf errmsg "Email must be specified.")))
         (unless errmsg
           (multiple-value-bind (ok reason)
-              (validate-captcha captcha-response captcha-hidden)
+              (validate-captcha captcha-response captcha-hidden db)
             (unless ok
               (setf errmsg (if (eq reason :timeout)
                                "Captcha timed out. Enter new answer."
@@ -1353,7 +1353,7 @@
     (unless user
       (unless (or errmsg (and preview (blankp captcha-response)))
         (multiple-value-bind (ok reason)
-            (validate-captcha captcha-response captcha-hidden)
+            (validate-captcha captcha-response captcha-hidden db)
           (unless ok
             (setf errmsg
                   (if (eq reason :timeout)
@@ -1727,7 +1727,7 @@
             (setf errmsg "There is no user with that name or email")))
         (unless (and (not submit) (blankp captcha-response))
           (multiple-value-bind (ok reason)
-              (validate-captcha captcha-response captcha-hidden)
+              (validate-captcha captcha-response captcha-hidden db)
             (unless ok
               (unless errmsg
                 (setf errmsg
