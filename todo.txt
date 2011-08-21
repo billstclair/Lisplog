@@ -1,6 +1,8 @@
 Dynamic server
 ==============
 
+"You are logged in as: clyde" on dynamic pages.
+
 Comments RSS feed. New icons: images/rss-32.png, images/comment-rss-32.png
 
 Link to year and next and previous months on months pages, top and bottom of page.

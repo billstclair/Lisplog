@@ -1,0 +1,50 @@
+<!-- TMPL_LOOP posts -->
+	<div class="post<!-- TMPL_IF oddp --> alt<!-- /TMPL_IF -->">
+          <h2>
+             <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a><!-- TMPL_IF unpublished -->
+             <span class="unpublished">&nbsp;&nbsp;[UNPUBLISHED]</span><!-- /TMPL_IF -->
+          </h2>
+          <p class="date">
+            Submitted by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date --><!-- TMPL_IF category-info -->
+            <span class="meta">
+              <!-- TMPL_LOOP category-info -->
+              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR prev-url -->" title="Previous post in category">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+              <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR cat-link -->" title="<!-- TMPL_VAR cat-desc -->"><!-- TMPL_VAR cat-name --></a>
+              <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR next-url -->" title="Next post in category">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
+              <!-- /TMPL_LOOP -->
+            </span>
+<!-- /TMPL_IF -->
+          </p>
+          <!-- TMPL_VAR body --><!-- TMPL_IF no-editing --><!-- TMPL_ELSE -->
+          <p class="meta"><!-- TMPL_IF comment-count -->
+            <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#comments"><!-- TMPL_VAR comment-count --></a><!-- TMPL_ELSE -->
+            <a href="<!-- TMPL_VAR home -->/admin/?add_comment=<!-- TMPL_VAR nid -->">Add comment</a><!-- /TMPL_IF -->&nbsp;&nbsp;
+            <a href="<!-- TMPL_VAR home -->/admin/?edit_post=<!-- TMPL_VAR nid -->">Edit post</a>&nbsp;&nbsp;
+            <a href="<!-- TMPL_VAR home -->/admin/add_post">Add post</a>
+          </p><!-- /TMPL_IF -->
+        </div><!-- TMPL_IF comment-plists -->
+        <div class="comments">
+           <p class="comments-label">
+             <a name="comments">Comments (<!-- TMPL_VAR count-comments -->)</a>
+           </p><!-- TMPL_LOOP comment-plists -->
+           <div class="post">
+             <h3>
+               <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR permalink -->#comment-<!-- TMPL_VAR cid -->" name="comment-<!-- TMPL_VAR cid -->"><!-- TMPL_VAR subject --></a>
+             </h3>
+             <p class="date">Submitted by <!-- TMPL_IF homepage --><a href="<!-- TMPL_VAR homepage -->"><!-- /TMPL_IF --><!-- TMPL_VAR name --><!-- TMPL_IF homepage --></a><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --></p>
+             <!-- TMPL_VAR comment -->
+             <p class="meta"><a href="<!-- TMPL_VAR home -->/admin/?edit_comment=<!-- TMPL_VAR cid -->">Edit comment</a></p>
+           </div><!-- /TMPL_LOOP -->
+        </div>
+        <p class="meta">
+          <a href="<!-- TMPL_VAR home -->/admin/?add_comment=<!-- TMPL_VAR nid -->">Add comment</a>&nbsp;&nbsp;
+          <a href="<!-- TMPL_VAR home -->/admin/?edit_post=<!-- TMPL_VAR nid -->">Edit post</a>&nbsp;&nbsp;
+          <a href="<!-- TMPL_VAR home -->/admin/add_post">Add post</a>
+        </p><!-- /TMPL_IF --><!-- TMPL_IF recent-posts -->
+        <div class="post">
+          <h3>Previous Posts:</h3>
+          <p><!-- TMPL_LOOP recent-posts -->
+            <a href="<!-- TMPL_VAR home -->/<!-- TMPL_VAR link -->"><!-- TMPL_VAR title --></a><br/><!-- /TMPL_LOOP -->
+          </p>
+        </div><!-- /TMPL_IF  -->
+<!-- /TMPL_LOOP -->

@@ -1,0 +1,73 @@
+<!--?xml version="1.0" encoding="UTF-8" ?-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+  <meta http-equiv="Content-Style-Type" content="text/css"/><!-- TMPL_IF base -->
+  <base href="<!-- TMPL_VAR base -->"/><!-- /TMPL_IF -->
+  <link rel="stylesheet" type="text/css" href="<!-- TMPL_VAR home -->/css/layout.css"/><!-- TMPL_LOOP header-links -->
+  <link rel="<!-- TMPL_VAR rel -->" type="<!-- TMPL_VAR type -->"<!-- TMPL_IF title --> title="<!-- TMPL_VAR title -->"<!-- /TMPL_IF --> href="<!-- TMPL_VAR href -->"/><!-- /TMPL_LOOP -->
+  <title><!-- TMPL_IF page-title --><!-- TMPL_VAR page-title --> | <!-- TMPL_VAR site-name --><!-- TMPL_ELSE --><!-- TMPL_VAR site-name --> | <!-- TMPL_VAR site-slogan --><!-- /TMPL_IF --></title>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="title">
+        <table>
+          <tr>
+            <td>
+              <a href="<!-- TMPL_VAR home -->"><img src="<!-- TMPL_VAR site-logo -->"/></a>
+            </td><td>
+              <h1><!-- TMPL_VAR site-name --></h1>
+	      <p class="meta"><!-- TMPL_VAR site-slogan --></p>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <form  method="get" action="https://encrypted.google.com/search">
+        <legend>Search</legend>
+        <p>
+          <input accesskey="s" id="s" type="text" name="q" size="15" maxlength="255" value=""/>
+          <input src="css/magnifier.png" alt="Search" type="image"/>
+          <input type="hidden" name="domains" value="nomorecages.org"/>
+          <input type="hidden" name="sitesearch" value="nomorecages.org"/>
+        </p>
+      </form>
+    </div><!-- TMPL_IF show-site-description-p -->
+
+    <!-- Body with full length content -->
+    <div class="body">
+      <!-- TMPL_VAR site-description-html -->
+    </div>
+    <!-- End body with full length content --><!-- /TMPL_IF -->
+		
+    <!-- Body with example post data -->
+    <div class="body">
+      <div class="column two-thirds">
+        <!-- TMPL_VAR page-content -->
+      </div>
+			
+      <div class="column one-third">
+        <table id="sidebar-table">
+          <tr>
+            <td id="sidebar-column">
+              <!-- TMPL_LOOP blocks -->
+              <div class="sidebar-content">
+                <!-- TMPL_VAR html -->
+              </div>
+              <!-- /TMPL_LOOP -->
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- End body with example post data -->
+      <hr>
+	<!-- Page footer -->
+	<div class="footer">
+	  <center><!-- TMPL_VAR footer-html --></center>
+	</div>
+	<!-- End footer -->
+      </div>
+    </div>
+  </body>
+</html>
