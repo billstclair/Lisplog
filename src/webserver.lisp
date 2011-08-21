@@ -91,7 +91,7 @@
 
 ;; <baseurl>/admin/submit_post
 (hunchentoot:define-easy-handler (handle-submit-post :uri "/submit_post")
-    (uri https node-num title alias published promoted post-body
+    (uri https node-num title alias published promoted body
          input-format preview submit delete)
   (submit-post uri https
                :node-num node-num
@@ -99,7 +99,7 @@
                :alias alias
                :published published
                :promoted promoted
-               :post-body post-body
+               :body body
                :input-format input-format
                :preview preview
                :submit submit
@@ -850,7 +850,7 @@
          (created (getf node :created))
          (promote (if node (getf node :promote) 1))
          (status (if node (getf node :status) 1))
-         (post-body (getf node :body))
+         (body (getf node :body))
          (format (if node (getf node :format) 1))
          plist)
     (when (and node-num (not node))
@@ -875,7 +875,7 @@
                          :alias (efh alias)
                          :published (eql status 1)
                          :promoted (eql promote 1)
-                         :post-body (efh post-body)
+                         :body (efh body)
                          :category-rows (node-to-edit-post-category-rows node db)
                          (node-format-to-edit-post-plist format))))
     (render-template ".edit-post.tmpl" plist
@@ -968,21 +968,21 @@
 (defun save-updated-node (node &key
                           (data-db *data-db*)
                           (site-db *site-db*)
-                          title uid post-body
+                          title uid body
                           created alias categories
                           (status 1)
                           (promote 1)
                           (format $filtered-html-format))
   (check-type title string)
   (check-type uid integer)
-  (check-type post-body string)
+  (check-type body string)
   (check-type created (or null integer))
   (check-type alias (or null string))
   (check-type categories list)
   (check-type status integer)
   (check-type promote integer)
   (assert (member format *valid-post-format-values*))
-  (assert (not (or (blankp title) (blankp uid) (blankp post-body))))
+  (assert (not (or (blankp title) (blankp uid) (blankp body))))
   (with-node-save-lock
     (let ((new-p (null node))
           (now (get-unix-time))
@@ -1005,7 +1005,7 @@
                               :created created
                               :changed now
                               :promote promote
-                              :body post-body
+                              :body body
                               :format format)
                    alias new-alias
                    new-alias-p t)
@@ -1029,7 +1029,7 @@
                        (t (setf delete-aliases-p t))))
                (setf (getf node :changed) now
                      (getf node :promote) promote
-                     (getf node :body) post-body
+                     (getf node :body) body
                      (getf node :format) format)))
       (let* ((old-categories
               (loop for (cat) on (getf node :cat-neighbors) by #'cddr
@@ -1061,7 +1061,7 @@
       alias)))
 
 (defun submit-post (uri https &key node-num title alias published
-                    promoted post-body input-format preview submit delete)
+                    promoted body input-format preview submit delete)
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
          (site-db (with-site-db (db) *site-db*))
@@ -1084,10 +1084,10 @@
            (setf errmsg "Title may not be blank")
            (when node
              (setf title (getf node :title))))
-          ((blankp post-body)
+          ((blankp body)
            (setf errmsg "Body may not be blank")
            (when node
-             (setf post-body (getf node :body)))))
+             (setf body (getf node :body)))))
     (when (and node-num (not node))
       (return-from submit-post
         (redirect-to-error-page uri https $unknown-post-number)))
@@ -1108,7 +1108,7 @@
                           :alias (efh alias)
                           :published (eql status 1)
                           :promoted (eql promote 1)
-                          :post-body (efh post-body)
+                          :body (efh body)
                           :category-rows (node-to-edit-post-category-rows
                                           categories db)
                           (node-format-to-edit-post-plist format)))
@@ -1123,7 +1123,7 @@
                               :aliases (list alias)
                               :created created
                               :status 1
-                              :body post-body
+                              :body body
                               :format format
                               :home home)
                         :comments-p nil
@@ -1147,7 +1147,7 @@
                                     :created created
                                     :status status
                                     :promote promote
-                                    :post-body post-body
+                                    :body body
                                     :categories categories
                                     :format format))
            (let ((base (compute-base-and-home uri https)))
