@@ -1,6 +1,6 @@
 /*
 Theme Name: Simply
-Theme URI: http://eksith.wordpress.com/2011/07/18/variable-width-columns-in-css/
+Theme URI: http://eksith.com/experiments/simply/simply-03.html
 Description: A variable width, multi-column theme for simple content display
 Version: 0.3
 Author: Jayanath Rodrigo
@@ -24,13 +24,17 @@ body
 @media screen
 {
 	/* Reset */
-	body, div, p, h1, h2, h3, h4, h5, h6, form, fieldset, legend, input, select, ul, li, table, td, th, hr
+	body, div, p, h1, h2, h3, h4, h5, h6, form, fieldset, legend, select, ul, li, table, td, th, hr
 	{
 		margin: 0;
 		padding: 0;
 		border: 0;
 	}
 	
+        li {
+            margin-left: 2em;
+        }
+
 	body
 	{
 		font: normal 90% Sans-serif,tahoma,verdana;
@@ -39,6 +43,15 @@ body
 		background:#f5f5f5 url(bg.png);
 		color:#000;
 	}
+
+        a {
+            text-decoration: none;
+        }
+        a:hover {
+	    color:#000;
+	    background:transparent;
+	    text-decoration:underline;
+        }
 
 	/* Core elements */
 	div.page
@@ -57,7 +70,7 @@ body
 		background:#fff;
 		padding:10px;
 		box-shadow:3px 3px 3px #ddd;
-		/* border:1px solid #ddd; */
+	        border:1px solid #ddd;
 	}
 	
 	div.title
@@ -81,13 +94,16 @@ body
 
 	div.post
 	{
-		border-bottom:1px solid #f5f5f5;
-		padding: 0 0 2em 0;
+		padding: 0 0 0 0;
 	}
 	div.alt
 	{
 		background:#f8f8ff;
 	}
+        span.unpublished {
+            color: red;
+            font-weight: bold;
+        }
 
 	/* Navigation bar */
 	div.nav
@@ -115,7 +131,6 @@ body
 		display: block;
 		font-size: 120%;
 		color:#575757;
-		text-decoration: none;
 	}
 	
 	div.nav ul li ul
@@ -166,12 +181,13 @@ body
 	
 	div.two-thirds
 	{
-		width:65%;
+		width:70%;
 	}
 
 	div.one-third
 	{
-		width:31%;
+		width:25%;
+                padding-top: 1em;
 	}
 
 	div.one-fourth
@@ -188,8 +204,8 @@ body
 	/* Text elements */
 	h1, h2, h3
 	{
-		padding: .5em;
-		font-weight:normal;
+		padding-left: 0.5em;
+		font-weight:bold;
 	}
 	h1
 	{
@@ -208,7 +224,6 @@ body
 	h3
 	{
 		font-size: 115%;
-		border-bottom: 1px solid #ddd;
 	}
 
 	h4, h5, h6
@@ -232,55 +247,32 @@ body
 	h6
 	{
 		font-size:100%;
-		text-decoration:underline;
 	}
 	
 	a
 	{
-		color: #369;
+		color: #88d;
 	}
 
-	a:hover, ul li.active a
-	{
-		color: #fff;
-		background: #369;
-		text-decoration: none;
-	}
-
-        p.comments-label a:hover {
-            background: #fff;
+        div.footer center {
+            vertical-align: middle;
         }
-	
-	div.post a:visited, div.palt a:visited
-	{
-		color:#000;
-		text-decoration:underline;
-	}
-	
+
 	h1 a {
 		color:#575757;
-		text-decoration:none;
 	}
 	
 	h5.pages a
 	{
 		word-spacing: normal;
-		text-decoration: none;
 	}
 
 	div.nav form a
 	{
-		text-decoration:none;
 		font-size:120%;
 		font-weight:bold;
 	}
 
-	div.nav ul li a:hover, ul li.active a
-	{
-		background:#53879d !important;
-		color: #fff !important;
-	}
-	
 	div.nav ul li ul li a, div.nav ul li.active ul li a
 	{
 		display: block;
@@ -290,17 +282,9 @@ body
 		color:#fff !important;
 		font-size:100%;
 	}
-
-	div.nav ul li ul li a:hover, div.nav ul li.active ul li a:hover
-	{
-		background:#369 !important;
-		color:#fff !important;
-	}
-
 	a.tag
 	{
 		padding: 5px 3px;
-		text-decoration: none;
 	}
 	a.x1
 	{
@@ -367,57 +351,30 @@ body
 		font-size: 25px;
 	}
 	
-	p.meta a, p.date a
-	{
-		text-decoration:none;
-	}
-	
-	h1 a, h2 a, h3 a
-	{
-		text-decoration:none;
-	}
-
-	h1 a:hover, h2 a:hover, h3 a:hover, p.meta a:hover, p.date a:hover
-	{
-		color:#000;
-		background:transparent;
-		text-decoration:underline;
-	}
-
-	div.column h3 a, div.column h3 span
-	{
-		display:block !important;
-		position:absolute;
-		bottom:0;
-		padding:3px;
-		background:#575757;
-		color:#fff;
-	}
-	
-	div.column h3 a:hover
-	{
-		text-decoration:none;
-		background:#000;
-	}
+        p.meta {
+            
+        }
 	
 	ul.list li a
 	{
 		padding: 5px 10px;
 		display: block;
-		text-decoration: none;
 	}
-	
-	div.column ul li a:hover, div.sidebar ul li a:hover
-	{
-		color:#369;
-		background:#f8f8f8;
-	}
-
 	p
 	{
-		padding: .4em .8em;
-		line-height:180%
+		padding: .4em .4em;
+		line-height:120%
 	}
+
+        div.comments {
+            margin-left: 10px;
+            border: 1px solid #ccc;
+        }
+
+	p.comments-label {
+            font-size: 140%;
+            padding-left: .5em !important;
+        }
 
 	p.tags
 	{
@@ -437,12 +394,13 @@ body
 	p.date, p.meta
 	{
 		font-size: 80%;
+                padding-top: 0 !important;
 	}
 	
 	div.post p.meta, div.post p.meta 
 	{
 		clear:both;
-		margin: 2em 0 0 0;
+		margin: 0 0 0 0;
 	}
 	
 	span.meta
@@ -612,7 +570,7 @@ body
 	{
 		display:block;
 	}
-	
+
 	div.body textarea
 	{
 		width:100%;
@@ -651,10 +609,94 @@ body
 		color:#fff !important;
 		cursor:pointer;
 	}
+
 	label.error
 	{
 		color: #fff;
 		background: #f33;
 		padding: 2px;
 	}
+        blockquote {
+            margin: 0 2em .8em 2em;
+            padding: 0.4em .4em 0.4em .4em;
+            border: 1px solid #ddd;
+            background: #fff8f8;
+        }
+        div.alt blockquote {
+            background: #f8f8f8;
+        }
+
+        #sidebar-table {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #sidebar-column {
+            width: 100%;
+        }
+        .sidebar-content {
+            background-color: #fff8f8;
+            color: #555;
+            width: 100%;
+            border: solid 1px #ccc;
+            margin: 2px 0px 2px 2px;
+            padding: 2px 10px 2px 10px;
+            font-family: Trebuchet, Verdana, Helvetica, Arial, Lucida, sans-serif;
+        }
+        .sidebar-banner {
+            text-align: center;
+        }
+        p.sidebar-menu {
+            line-height: 140% !important;
+        }
+
+        p.day-links {
+            margin-left: 1em;
+            text-indent: -1em;
+            padding-bottom: .4em !important;
+        }
+
+        table.prettytable {
+            margin: 0em 0.5em 0.5em 0.5em;
+            background: whitesmoke;
+            border-collapse: collapse;
+        }
+        table.prettytable th, table.prettytable td {
+            border: 1px silver solid;
+            padding: 0.2em;
+        }
+        table.prettytable th {
+            background: gainsboro;
+            text-align: center;
+        }
+        table.prettytable caption {
+            margin-left: inherit;
+            margin-right: inherit;
+        }
+        table.innertable th, table.innertable td {
+            border: 0;
+        }
+
+        div.preview {
+            margin-left: 2em;
+            margin-right: 2em;
+            padding-top: .5em;
+            padding-left: .5em;
+            padding-right: .5em;
+            border: solid 1px #ccc;
+        }
+
+        div.comment-preview {
+            margin-left: 2em;
+            margin-right: 2em;
+            padding-top: .5em;
+            padding-left: .5em;
+            padding-right: .5em;
+            border: solid 1px #ccc;
+        }
+
+        div.errmsg {
+            padding-top: 0.4em;
+            color: red;
+            font-weight: bold;
+        }
 }
