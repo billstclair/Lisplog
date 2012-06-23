@@ -469,7 +469,7 @@
       (unless username
         (return-from profile
           (redirect-to-error-page uri https $bad-registration)))
-      (when (get-user-by-name username)
+      (when (get-user-by-name username db)
         (return-from profile
           (redirect-to-error-page uri https $used-registration)))
       (setf user (list :uid (setf uid (allocate-uid db))
