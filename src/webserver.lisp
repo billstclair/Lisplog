@@ -387,7 +387,7 @@
          (uid (and session (uid-of session)))
          (user (and uid (read-user uid db))))
     (multiple-value-bind (username email)
-        (ignore-errors (decode-registration verify))
+        (ignore-errors (decode-registration verify db))
       (unless (and username
                    (equal username (getf user :name))
                    (equal email (getf user :new-email)))
@@ -465,7 +465,7 @@
         (return-from profile
           (redirect-to-error-page uri https $logged-in-registration)))
       (multiple-value-setq (username email)
-        (ignore-errors (decode-registration verify)))
+        (ignore-errors (decode-registration verify db)))
       (unless username
         (return-from profile
           (redirect-to-error-page uri https $bad-registration)))
@@ -1695,7 +1695,7 @@
     (multiple-value-bind (base home) (compute-base-and-home uri https)
       (when verify
         (multiple-value-bind (username seed)
-            (ignore-errors (decode-registration verify))
+            (ignore-errors (decode-registration verify db))
           (cond ((not username)
                  (setf errmsg "Malformed password recovery link"))
                 ((not (setf user (get-user-by-name username db)))

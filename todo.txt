@@ -1,6 +1,8 @@
 Dynamic server
 ==============
 
+https://github.com/sellout/cl-gravatar icons for comments, if enabled.
+
 "You are logged in as: clyde" on dynamic pages.
 
 Comments RSS feed. New icons: images/rss-32.png, images/comment-rss-32.png
