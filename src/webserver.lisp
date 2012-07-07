@@ -1034,8 +1034,7 @@
       (let* ((old-categories
               (loop for (cat) on (getf node :cat-neighbors) by #'cddr
                  collect cat))
-             (old-and-new (union categories old-categories))
-             (render-categories-p nil))
+             (old-and-new (union categories old-categories)))
         (unless (and (eql (length old-categories)
                           (length categories))
                      (eql (length old-categories)
@@ -1043,13 +1042,11 @@
           (setf node (update-node-categories
                       node categories old-categories
                       :data-db data-db
-                      :site-db site-db)
-                render-categories-p t))
+                      :site-db site-db)))
         (setf (read-node nid data-db) node)
-        (when render-categories-p
-          (dolist (cat old-and-new)
-            (render-category-page cat :site-db site-db :data-db data-db))
-          (render-categories-index :site-db site-db :data-db data-db)))
+        (dolist (cat old-and-new)
+          (render-category-page cat :site-db site-db :data-db data-db))
+        (render-categories-index :site-db site-db :data-db data-db))
       (cond (delete-aliases-p
              (remove-node-from-site node :data-db data-db :site-db site-db)
              (setf alias (format nil "admin/?node=~d" nid)))

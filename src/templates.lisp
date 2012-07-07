@@ -741,7 +741,9 @@
            (items (loop for plist in node-plists
                      for title = (efh (getf plist :title))
                      for link = (efh (strcat base-url (getf plist :permalink)))
-                     for description = (efh (getf plist :body))
+                     for description = (efh (fill-and-print-to-string
+                                             (getf plist :body)
+                                             '(:home ".")))
                      for categories = nil ;do this once we have URLs for categories
                      for pubdate = (getf plist :post-date)
                      collect (list :title title
