@@ -7,15 +7,6 @@
 
 (in-package :lisplog)
 
-(setf xmls::*entities*
-  #(("lt;" #\<)
-    ("gt;" #\>)
-    ("amp;" #\&)
-    ("apos;" #\')
-    ("quot;" #\")
-    ("laquo;" #.(code-char 171))
-    ("raquo;" #.(code-char 187))))
-
 (defclass rss ()
   ((title :accessor title :initarg :title :initform nil)
    (feed-link :accessor feed-link :initarg :feed-link :initform nil)
