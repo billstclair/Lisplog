@@ -264,12 +264,45 @@
 (defparameter *short-month-names*
   '("Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"))
 
+(defparameter *rfc-1123-time-offsets*
+  `(("GMT" . 0)
+    ("UTC" . 0)
+    ("EDT" . ,(* -4 3600))
+    ("EST" . ,(* -5 3600))
+    ("CDT" . ,(* -5 3600))
+    ("CST" . ,(* -6 3600))
+    ("MDT" . ,(* -6 3600))
+    ("MST" . ,(* -7 3600))
+    ("PDT" . ,(* -7 3600))
+    ("MST" . ,(* -8 3600))))
+
+(defun rfc-1123-time-offset (str)
+  (flet ((err ()
+           (error "Malformed RFC 1123 time offset: ~s" str)))
+    (cond ((cdr (assoc str *rfc-1123-time-offsets* :test #'equal)))
+          ((and (stringp str)
+                (= (length str) 5))
+           (let* ((sign-char (elt str 0))
+                  (sign (cond ((eql sign-char #\+) 1)
+                              ((eql sign-char #\-) -1)
+                              (t (err))))
+                  (val (parse-integer str :start 1)))
+             (if (eql val 0)
+                 0
+                 (let ((hours (truncate val 100))
+                       (min (mod val 100)))
+                   (* sign (* 60 (+ min (* 60 hours))))))))
+          (t (err)))))
+
 ;; "Sat, 07 May 2011 12:53:33 GMT"
 (defun parse-rfc-1123-date (string)
-  (let ((parts (split-sequence:split-sequence #\space string)))
-    (assert
-     (and (eql (length parts) 6)
-          (string-equal "GMT" (elt parts 5))))
+  (let* ((parts (split-sequence:split-sequence #\space string))
+         (len (length parts)))
+    (cond ((eql len 6))
+          ((eql len 5)
+           (when (ignore-errors (parse-integer (car parts)))
+             (push "noday" parts)))
+          (t (error "Malformed RFC 1123 date: ~s" string)))
     (let ((day (parse-integer (elt parts 1)))
           (month (1+ (position (elt parts 2) *short-month-names*
                                :test #'string-equal)))
@@ -278,8 +311,10 @@
       (assert (eql 3 (length time-parts)))
       (let ((h (parse-integer (elt time-parts 0)))
             (m (parse-integer (elt time-parts 1)))
-            (s (parse-integer (elt time-parts 2))))
-        (encode-universal-time s m h day month year 0)))))
+            (s (parse-integer (elt time-parts 2)))
+            (offset (rfc-1123-time-offset (elt parts 5))))
+        (- (encode-universal-time s m h day month year 0)
+           offset)))))
 
 (defun rfc-1123-string-to-unix-time (string)
   (universal-to-unix-time (parse-rfc-1123-date string)))

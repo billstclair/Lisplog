@@ -9,7 +9,8 @@
   :depends-on (fsdb cl-crypto           ;local
                md5 anaphora html-template cl-fad cl-ppcre
                split-sequence bordeaux-threads hunchentoot
-               limited-thread-taskmaster cl-base64 cl-smtp)
+               limited-thread-taskmaster cl-base64 cl-smtp
+               xmls drakma)
   :components
   ((:module src
     :serial t
@@ -18,8 +19,10 @@
      #+ccl
      (:file "ccl")               ;dev tools, not needed in other lisps
      (:file "utility")
+     (:file "iso8601")
      (:file "tokens")
      (:file "db")
+     (:file "rss-reader")
      (:file "templates")
      (:file "history")
      (:file "csv")
