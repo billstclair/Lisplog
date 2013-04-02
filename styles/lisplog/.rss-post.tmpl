@@ -1,0 +1,11 @@
+<!-- TMPL_LOOP posts -->
+	<div class="post<!-- TMPL_IF oddp --> alt<!-- /TMPL_IF -->">
+          <h2>
+             <a href="<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+          </h2>
+          <p class="date">
+            via <a href=" <!-- TMPL_VAR site-link -->"><!-- TMPL_VAR site-name --></a> by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date -->
+          </p>
+          <!-- TMPL_VAR body -->
+        </div>
+<!-- /TMPL_LOOP -->

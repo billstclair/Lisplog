@@ -174,11 +174,12 @@
 ;;; rss/
 ;;;   settings    ;; (:update-period <seconds>
 ;;;               ;;  :last-update <time>)
+;;;               ;;  :items-per-page <integer>
 ;;;               ;;  :current-page <integer>
 ;;;               ;;  :max-pages <integer>)
 ;;;   feedurls    ;; (<url> <url> ...)
 ;;;   feeds/
-;;;     <hash>    ;; ((<url> :last-pubdate <time>) ...)
+;;;     <hash>    ;; ((<url> :last-published-time <time>) ...)
 ;;;   index       ;; plist to generate index.html (latest page)
 ;;;
 
@@ -232,6 +233,84 @@
 
 (defun (setf rss-index) (plist &optional (db *data-db*))
   (setf (sexp-get db $RSS $INDEX :subdirs-p nil) plist))
+
+;;;
+;;; The aggregator
+;;;
+
+(defparameter *default-rss-update-period* 3600) ;1 hour
+(defparameter *default-rss-items-per-page* 20)
+(defparameter *default-rss-max-pages* 50)
+
+(defun get-new-rss-entries (&optional (db *data-db*))
+  (let* ((urls (rss-feedurls db))
+         (settings (rss-settings db))
+         (current-page (getf settings :current-page 1))
+         (max-pages (getf settings :max-pages *default-rss-max-pages*))
+         (max-published-times nil)
+         (entries nil))
+    current-page max-pages
+    (dolist (url urls)
+      (format t "~s~%" url)
+      (let* ((last-published-time (or (feed-setting url :last-published-time db) 0))
+             (max-published-time last-published-time)
+             (new-entries nil)
+            (rss (ignore-errors (parse-rss url))))
+        (when rss
+          (dolist (entry (entries rss))
+            (let ((published-time (published-time entry)))
+              (when (and published-time (> published-time last-published-time))
+                (push entry new-entries)
+                (when (> published-time max-published-time)
+                  (setf max-published-time published-time)))))
+          (when new-entries
+            (setf entries (merge 'list
+                                 entries
+                                 (sort new-entries #'> :key #'published-time)
+                                 #'>
+                                 :key #'published-time))
+            (push (cons url max-published-time) max-published-times)))))
+    (values entries max-published-times)))
+
+(defparameter *style-rss-post-file* ".rss-post.tmpl")
+
+(defun get-rss-post-template-name (&optional (db *data-db*))
+  (with-settings (db)
+    (or (get-setting :rss-post-template) *style-rss-post-file*)))
+
+(defun make-rss-entry-plist (entry cnt)
+  (let ((rss (rss entry)))
+    `(:oddp ,(oddp cnt)
+      :permalink ,(link entry)
+      :title ,(title entry)
+      :site-link ,(link rss)
+      :site-name ,(title rss)
+      :author ,(author entry)
+      :post-date ,(hunchentoot:rfc-1123-date (published-time entry))
+      :body ,(or (summary entry) (content entry)))))
+
+(defun render-rss-page (page-number alias entries
+                        &key (data-db *data-db*) (site-db *site-db*))
+  (let* ((posts (loop for entry in entries
+                   for cnt from 0
+                   collect (make-rss-entry-plist entry cnt)))
+         (post-template-name (get-rss-post-template-name data-db))
+         (plist `(:posts ,posts
+                         :page-title ,(format nil "Feed aggregator page ~d"
+                                              page-number)
+                         :home ,(determine-home alias)
+                         :permalink ,alias)))
+    (setf (fsdb:db-get site-db alias)
+          (render-template post-template-name plist :data-db data-db))
+    posts))
+
+(defun aggregate-rss (&key (data-db *data-db*) (site-db *site-db*))
+  (multiple-value-bind (entries max-published-time-alist)
+      (get-new-rss-entries data-db)
+    (let ((posts (render-rss-page 1 "aggregator/index.html" entries
+                                  :data-db data-db :site-db site-db)))
+      (setf (rss-index data-db) posts)
+      max-published-time-alist)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
