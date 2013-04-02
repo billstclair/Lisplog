@@ -13,15 +13,17 @@
    (link :accessor link :initarg :link :initform nil)
    (updated-time :accessor updated-time :initarg :updated-time :initform nil)
    (subtitle :accessor subtitle :initarg :subtitle :initform nil)
+   (editor :accessor editor :initarg :editor :initform nil)
    (entries :accessor entries :initarg :entries :initform nil)
    (raw-parse :accessor raw-parse :initarg :raw-parse :initform nil)))
 
 (defmethod print-object ((rss rss) stream)
   (print-unreadable-object (rss stream :type t)
-    (format stream "~s" (title rss))))
+    (format stream "~s ~s" (title rss) (feed-link rss))))
 
 (defclass rss-entry ()
-  ((title :accessor title :initarg :title :initform nil)
+  ((rss :accessor rss :initarg :rss :initform nil)
+   (title :accessor title :initarg :title :initform nil)
    (link :accessor link :initarg :link :initform nil)
    (id :accessor id :initarg :id :initform nil)
    (published-time :accessor published-time :initarg :published-time :initform nil)
@@ -100,13 +102,16 @@
               ((or (equal tag "subtitle") (equal tag "description"))
                (when (stringp value)
                  (setf (subtitle rss) value)))
+              ((equal tag "managingEditor")
+               (when (stringp value)
+                 (setf (editor rss) value)))
               ((or (equal tag "entry") (equal tag "item"))
-               (push (parse-rss-entry body) (entries rss)))))
+               (push (parse-rss-entry rss body) (entries rss)))))
   (setf (entries rss) (nreverse (entries rss)))
   rss)
 
-(defun parse-rss-entry (entry)
-  (let ((res (make-instance 'rss-entry)))
+(defun parse-rss-entry (rss entry)
+  (let ((res (make-instance 'rss-entry :rss rss)))
     (loop for element in entry
        for (tag attributes . body) = (and (listp element)
                                           (listp (cdr element))
@@ -139,6 +144,9 @@
                 ((equal tag "summary")
                  (when (stringp value)
                    (setf (summary res) value)))
+                ((equal tag "creator")
+                 (when (stringp value)
+                   (setf (author res) value)))
                 ((equal tag "author")
                  (loop for elt in body
                     for (tag attributes value) = (and (listp elt)
@@ -160,6 +168,70 @@
                    (setf (content res) value)))))
     res))
 
+;;;
+;;; Database
+;;;
+;;; rss/
+;;;   settings    ;; (:update-period <seconds>
+;;;               ;;  :last-update <time>)
+;;;               ;;  :current-page <integer>
+;;;               ;;  :max-pages <integer>)
+;;;   feedurls    ;; (<url> <url> ...)
+;;;   feeds/
+;;;     <hash>    ;; ((<url> :last-pubdate <time>) ...)
+;;;   index       ;; plist to generate index.html (latest page)
+;;;
+
+(defun rss-settings (&optional (db *data-db*))
+  (sexp-get db $RSS $SETTINGS :subdirs-p nil))
+
+(defun (setf rss-settings) (settings &optional (db *data-db*))
+  (setf (sexp-get db $RSS $SETTINGS :subdirs-p nil) settings))
+
+(defun rss-setting (key &optional (db *data-db*))
+  (getf (rss-settings db) key))
+
+(defun (setf rss-setting) (value key &optional (db *data-db*))
+  (setf (getf (rss-settings db) key) value))
+
+(defun rss-feedurls (&optional (db *data-db*))
+  (sexp-get db $RSS $FEEDURLS :subdirs-p nil))
+  
+(defun (setf rss-feedurls) (urls &optional (db *data-db*))
+  (setf (sexp-get db $RSS $FEEDURLS :subdirs-p nil) urls))
+
+(defparameter $RSS/FEEDS (fsdb:append-db-keys $RSS $FEEDS))
+
+(defun feed-hash-settings (hash &optional (db *data-db*))
+  (sexp-get db $RSS/FEEDS hash :subdirs-p nil))
+
+(defun (setf feed-hash-settings) (settings hash &optional (db *data-db*))
+  (setf (sexp-get db $RSS/FEEDS hash :subdirs-p nil) settings))
+
+(defun feed-settings (url &optional (db *data-db*))
+  (cdr (assoc url (feed-hash-settings (cl-crypto:sha1 url) db)
+              :test #'equal)))
+
+(defun (setf feed-settings) (settings url &optional (db *data-db*))
+  (let* ((hash (cl-crypto:sha1 url))
+         (hash-settings (feed-hash-settings hash db))
+         (cell (assoc url hash-settings :test #'equal)))
+    (cond (cell (setf (cdr cell) settings))
+          (t (push (cons url settings) hash-settings)))
+    (setf (feed-hash-settings hash db) hash-settings)
+    settings))
+
+(defun feed-setting (url key &optional (db *data-db*))
+  (getf (feed-settings url db) key))
+  
+(defun (setf feed-setting) (value url key &optional (db *data-db*))
+  (setf (getf (feed-settings url db) key) value))
+  
+(defun rss-index (&optional (db *data-db*))
+  (sexp-get db $RSS $INDEX :subdirs-p nil))
+
+(defun (setf rss-index) (plist &optional (db *data-db*))
+  (setf (sexp-get db $RSS $INDEX :subdirs-p nil) plist))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
