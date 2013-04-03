@@ -1,3 +1,18 @@
+	<div class="post">
+          <h2>
+             <a href="<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+          </h2>
+          <p class="date">
+            Rendered on <!-- TMPL_VAR post-date -->
+            <span class="meta">
+              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+              <a href="./" title="index">latest</a>
+              <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
+            </span>
+          </p>
+          <!-- TMPL_VAR body -->
+        </div>
+
 <!-- TMPL_LOOP posts -->
 	<div class="post<!-- TMPL_IF oddp --> alt<!-- /TMPL_IF -->">
           <h2>
@@ -9,3 +24,12 @@
           <!-- TMPL_VAR body -->
         </div>
 <!-- /TMPL_LOOP -->
+
+	<div class="post">
+          <p>
+            &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+            <a href="./" title="index">latest</a>
+            <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
+          </p>
+          <!-- TMPL_VAR body -->
+        </div>
