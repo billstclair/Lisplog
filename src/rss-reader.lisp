@@ -363,9 +363,15 @@
 (defun trim-rss-pages (&optional (data-db *data-db*) (site-db *site-db*))
   (let* ((settings (rss-settings data-db))
          (max-pages (or (getf settings :max-pages) *default-rss-max-pages*))
-         (oldest-page (getf settings :oldest-page)))
-    ;; To do
-    max-pages oldest-page site-db))
+         (current-page (getf settings :current-page))
+         (oldest-page (or (getf settings :oldest-page) 1))
+         (delcnt (- (- current-page (1- oldest-page)) max-pages)))
+    (loop for i from 0 below delcnt
+       for alias = (rss-page-number-to-alias oldest-page)
+       do
+         (setf (fsdb:db-get site-db alias) nil)
+         (incf oldest-page))
+    (setf (rss-setting :oldest-page data-db) oldest-page)))
 
 (defun render-rss-pages (entries &key (data-db *data-db*) (site-db *site-db*))
   (unless entries
