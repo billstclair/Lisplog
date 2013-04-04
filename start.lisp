@@ -15,6 +15,8 @@
 
 (ll)
 
+(start-rss-reader-thread)
+
 (defun start-swank (&optional port)
   (when port
     (swank:create-server :port port :dont-close t)))

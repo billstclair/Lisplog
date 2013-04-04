@@ -11,6 +11,7 @@
   ((title :accessor title :initarg :title :initform nil)
    (feed-link :accessor feed-link :initarg :feed-link :initform nil)
    (link :accessor link :initarg :link :initform nil)
+   (base :accessor base :initarg :base :initform nil)
    (updated-time :accessor updated-time :initarg :updated-time :initform nil)
    (subtitle :accessor subtitle :initarg :subtitle :initform nil)
    (editor :accessor editor :initarg :editor :initform nil)
@@ -71,9 +72,11 @@
                              :raw-parse xml)))
     ;; We ignore the outermost tag for now.
     ;; Its name and attributes might eventually be useful for something
-    (and (listp xml)
-         (listp (cdr xml))
-         (parse-rss-xml (cddr xml) rss))))
+    (when (and (listp xml)
+               (listp (cdr xml)))
+      (let ((base (cadr-assoc "base" (cadr xml))))
+        (when base (setf (base rss) base)))
+      (parse-rss-xml (cddr xml) rss))))
 
 (defun parse-rss-xml (xml rss)
   (loop for element in xml
@@ -81,7 +84,8 @@
                                         (listp (cdr element))
                                         element)
      for value = (car body)
-     do (cond ((null tag))
+     do
+       (cond ((null tag))
               ((equal tag "channel")  ;RSS, not ATOM
                (return-from parse-rss-xml (parse-rss-xml body rss)))
               ((equal tag "title")
@@ -173,7 +177,7 @@
 ;;;
 ;;; rss/
 ;;;   settings     ;; (:update-period <seconds>
-;;;                ;;  :last-update <time>)
+;;;                ;;  :last-update <time>
 ;;;                ;;  :items-per-page <integer>
 ;;;                ;;  :current-page <integer>
 ;;;                ;;  :oldest-page <integer>
@@ -249,11 +253,11 @@
 (defparameter *default-rss-items-per-page* 20)
 (defparameter *default-rss-max-pages* 50)
 
-(defun get-new-rss-entries (&optional (db *data-db*))
-  (let* ((urls (rss-feedurls db))
-         (settings (rss-settings db))
-         (current-page (getf settings :current-page 1))
-         (max-pages (getf settings :max-pages *default-rss-max-pages*))
+(defun get-new-rss-entries (&key (db *data-db*)
+                            (urls (rss-feedurls db)))
+  (let* ((settings (rss-settings db))
+         (current-page (or (getf settings :current-page) 1))
+         (max-pages (or (getf settings :max-pages) *default-rss-max-pages*))
          (max-published-times nil)
          (entries nil))
     current-page max-pages
@@ -285,15 +289,41 @@
   (with-settings (db)
     (or (get-setting :rss-post-template) *style-rss-post-file*)))
 
+;; If their xml contains " srcnot='http:", we'll lose.
+;; Let them report it as a bug.
+(defun insert-rss-base (base body)
+  (let ((replacement (format nil "\\1~a" base)))
+    (setf body (cl-ppcre:regex-replace-all
+                " srcnot=(['\"]https?:)"
+                (cl-ppcre:regex-replace-all
+                 "( src=['\"])"
+                 (cl-ppcre:regex-replace-all
+                  " src=(['\"]https?:)" body " srcnot=\\1")
+                 replacement)
+                " src=\\1"))
+    (cl-ppcre:regex-replace-all
+     " hrefnot=(['\"]https?:)"
+     (cl-ppcre:regex-replace-all
+      "( href=['\"])"
+      (cl-ppcre:regex-replace-all
+       " href=(['\"]https?:)" body " hrefnot=\\1")
+      replacement)
+     " href=\\1")))
+
 (defun make-rss-entry-plist (entry)
-  (let ((rss (rss entry)))
+  (let* ((rss (rss entry))
+         (body (or (summary entry) (content entry)))
+         (base (base rss)))
+    (when base
+      (setf body (insert-rss-base base body)))
     `(:permalink ,(link entry)
       :title ,(title entry)
       :site-link ,(link rss)
+      :feed-link ,(feed-link rss)
       :site-name ,(title rss)
       :author ,(author entry)
       :post-date ,(hunchentoot:rfc-1123-date (published-time entry))
-      :body ,(or (summary entry) (content entry)))))
+      :body ,body)))
 
 (defun rss-page-number-to-alias (page-number &optional no-dir-p)
   (format nil "~a~d.html"
@@ -332,60 +362,82 @@
 
 (defun trim-rss-pages (&optional (data-db *data-db*) (site-db *site-db*))
   (let* ((settings (rss-settings data-db))
-         (max-pages (getf settings :max-pages *default-rss-max-pages*))
-         (oldest-page (getf settings :oldest-page nil)))
+         (max-pages (or (getf settings :max-pages) *default-rss-max-pages*))
+         (oldest-page (getf settings :oldest-page)))
     ;; To do
     max-pages oldest-page site-db))
 
 (defun render-rss-pages (entries &key (data-db *data-db*) (site-db *site-db*))
+  (unless entries
+    (return-from render-rss-pages))
+
   (let* ((old-posts (rss-index data-db))
          (settings (rss-settings data-db))
-         (items-per-page (getf settings :items-per-page
-                               *default-rss-items-per-page*))
-         (current-page (getf settings :current-page 1)))
-
-    (unless entries
-      (return-from render-rss-pages old-posts))
-
-    ;; This can happen when items-per-page is reduced
-    (loop for len = (length old-posts)
-       while (>= len items-per-page)
-       for posts = (last old-posts items-per-page)
+         (items-per-page (or (getf settings :items-per-page)
+                             *default-rss-items-per-page*))
+         (current-page (or (getf settings :current-page) 1))
+         (all-posts (nconc (mapcar #'make-rss-entry-plist entries) old-posts))
+         (post-cnt (length all-posts))
+         (pages (ceiling post-cnt items-per-page))
+         (first-page-cnt (- post-cnt (* (1- pages) items-per-page)))
+         (first-page-posts (subseq all-posts 0 first-page-cnt))
+         (last-page (+ current-page pages -1)))
+    (loop for page-number from last-page downto current-page
+       for page-posts = first-page-posts then (subseq posts 0 items-per-page)
+       for posts = (nthcdr first-page-cnt all-posts)
+       then (nthcdr items-per-page posts)
        do
-         (setf old-posts (butlast old-posts items-per-page))
-         (render-rss-page current-page posts :data-db data-db :site-db site-db)
-         (incf current-page))
+         (render-rss-page page-number page-posts
+                          :first-p (eql page-number last-page)
+                          :data-db data-db))
+    (cl-fad:copy-file
+     (fsdb:db-filename site-db (rss-page-number-to-alias last-page))
+     (fsdb:db-filename site-db (rss-page-number-to-alias "index"))
+     :overwrite t)
+    (setf (rss-setting :current-page data-db) last-page
+          (rss-index data-db) first-page-posts)
+    (trim-rss-pages data-db site-db)))
 
-    (loop for len = (length entries)
-       for count = (min len (- items-per-page (length old-posts)))
-       for page-entries = (last entries count)
-       for page-posts = (mapcar #'make-rss-entry-plist page-entries)
-       do
-         (setf page-posts (nconc page-posts old-posts)
-               old-posts nil
-               entries (butlast entries count))
-         (render-rss-page current-page page-posts
-                          :first-p (null entries)
-                          :data-db data-db :site-db site-db)
-         (unless entries (loop-finish))
-         (incf current-page)
-       finally
-         (cl-fad:copy-file
-          (fsdb:db-filename site-db (rss-page-number-to-alias current-page))
-          (fsdb:db-filename site-db (rss-page-number-to-alias "index"))
-          :overwrite t)
-         (setf (rss-setting :current-page data-db) current-page
-               (rss-index data-db) page-posts)
-         (trim-rss-pages data-db site-db))))
-
-(defun aggregate-rss (&key (data-db *data-db*) (site-db *site-db*))
+(defun aggregate-rss (&key (data-db *data-db*)
+                      (site-db *site-db*)
+                      (urls (rss-feedurls data-db)))
   (multiple-value-bind (entries max-published-time-alist)
-      (get-new-rss-entries data-db)
+      (get-new-rss-entries :urls urls :db data-db)
     (render-rss-pages entries :data-db data-db :site-db site-db)
     (loop for (url . time) in max-published-time-alist
        do
          (setf (feed-setting url :last-published-time data-db) time))
+    (setf (rss-setting :last-update) (get-universal-time))
     (length entries)))
+
+(defvar *rss-reader-thread* nil)
+
+(defun start-rss-reader-thread ()
+  (unless *rss-reader-thread*
+    (bt:make-thread #'rss-reader-thread-loop :name "RSS Reader")))
+
+(defun rss-reader-thread-loop ()
+  (unless *rss-reader-thread* 
+    (setf *rss-reader-thread* (bt:current-thread))
+    (unwind-protect
+         (loop
+            (ignore-errors (rss-reader-thread-step))
+            (sleep 60))
+      (setf *rss-reader-thread* nil))))
+
+(defun rss-reader-thread-step ()
+  (do-port-dbs (db)
+    (let ((urls (rss-feedurls db)))
+      (when urls
+        (let* ((settings (rss-settings))
+               (last-update (or (getf settings :last-update) 0))
+               (update-period (or (getf settings :update-period)
+                                  *default-rss-update-period*))
+               (next-update (+ last-update update-period)))
+          (when (>= (get-universal-time) next-update)
+            (format t "Aggregating RSS for ~s~%"
+                    (with-settings () (get-setting :site-name)))
+            (aggregate-rss :urls urls)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

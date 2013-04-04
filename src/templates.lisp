@@ -25,6 +25,12 @@
   ;; This is the default location, for development
   (fsdb:db-subdir *lisplog-db* $SITE))
 
+(defmacro with-site-db ((&optional (db *data-db*)) &body body)
+  `(let ((*data-db* ,db))
+     (with-settings ()
+       (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
+         ,@body))))
+
 ;; Bound during template operations
 ;; This is just a default, for development
 (defparameter *style-db*

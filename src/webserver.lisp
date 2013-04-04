@@ -7,12 +7,6 @@
 
 (in-package :lisplog)
 
-(defmacro with-site-db ((&optional (db *data-db*)) &body body)
-  `(let ((*data-db* ,db))
-     (with-settings ()
-       (let ((*site-db* (fsdb:make-fsdb (get-setting :site-directory))))
-         ,@body))))
-
 ;; Character encoding is actually a little wierd.
 ;; We're displaying as UTF-8, and the browser sends forms
 ;; to us encoded as UTF-8, but we receive latin-1

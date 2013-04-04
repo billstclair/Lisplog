@@ -1,0 +1,29 @@
+           <h2 class="content-title">
+             <a href="<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+           </h2>
+           <div class="info">
+             Rendered on <!-- TMPL_VAR post-date -->
+               <span class="categories">
+              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">newer</a><!-- TMPL_ELSE -->newer<!-- /TMPL_IF -->&nbsp;
+              &nbsp;<a href="./" title="index">latest</a>&nbsp;
+              &nbsp;<!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
+               </span>
+           </div>
+
+<!-- TMPL_LOOP posts -->           <h2 class="content-title">
+             <a href="<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+           </h2>
+           <div class="info">
+             via <a href=" <!-- TMPL_VAR site-link -->"><!-- TMPL_VAR site-name --></a><!-- TMPL_IF author --> by <!-- TMPL_VAR author --><!-- /TMPL_IF --> on <!-- TMPL_VAR post-date --> <a href="<!-- TMPL_VAR feed-link -->"><img src="<!-- TMPL_VAR home -->/images/xml.png"/></a>
+           </div>
+           <div class="content-item">
+             <!-- TMPL_VAR body -->
+           </div>
+<!-- /TMPL_LOOP  -->
+
+           <div class="content-item">
+              <br/>
+              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">newer</a><!-- TMPL_ELSE -->newer<!-- /TMPL_IF -->&nbsp;
+              &nbsp;<a href="./" title="index">latest</a>&nbsp;
+              &nbsp;<!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
+           </div>

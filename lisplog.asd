@@ -23,11 +23,11 @@
      (:file "tokens")
      (:file "db")
      (:file "templates")
-     (:file "rss-reader")
      (:file "history")
      (:file "csv")
      (:file "sessions")
      (:file "captcha")
+     (:file "rss-reader")
      (:file "webserver")
      ))))
 

@@ -143,6 +143,21 @@
         (setf (cdr cell) db)
         (push (cons port db) *port-db-alist*))))
 
+(defun map-port-dbs (f)
+  (loop for (port . db) in *port-db-alist*
+     do (progn
+          port
+          (with-site-db (db) (funcall f db)))))
+
+(defmacro do-port-dbs ((&optional db) &body body)
+  (unless db (setf db (gensym "DB")))
+  (let ((thunk (gensym "THUNK")))
+    `(flet ((,thunk (,db)
+              (declare (ignorable ,db))
+              ,@body))
+       (declare (dynamic-extent #',thunk))
+       (map-port-dbs #',thunk))))
+
 (defun get-port-acceptor (&optional (port (hunchentoot:acceptor-port
                                            hunchentoot:*acceptor*)))
   (cdr (assoc port *port-acceptor-alist*)))
