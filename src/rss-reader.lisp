@@ -346,12 +346,13 @@
          (newer-link (unless first-p
                        (rss-page-number-to-alias (1+ page-number) t)))
          (post-template-name (get-rss-post-template-name data-db))
+         (title (if first-p
+                    "Feed Aggregator"
+                    (format nil "Feed Aggregator Page ~d" page-number)))
          (plist `(:posts ,posts
                   :post-date ,(hunchentoot:rfc-1123-date)
-                  :title ,(if first-p
-                              "Feed Aggregator"
-                              (format nil "Feed Aggregator Page ~d"
-                                      page-number))
+                  :title ,title
+                  :page-title ,title
                   :home ,(determine-home alias)
                   :permalink ,(if first-p "./" permalink)
                   :prev-url ,newer-link
