@@ -62,7 +62,10 @@
           (let ((s (drakma:http-request
                     url
                     :want-stream t
-                    :connection-timeout 5)))
+                    :connection-timeout 5
+                    #+ccl :deadline
+                    #+ccl (+ (get-internal-real-time)
+                             (* 30 internal-time-units-per-second)))))
             (unwind-protect
                  (remove-namespaces-from-xml
                   (or (xmls:parse s) (error "Empty RSS at ~s" url)))
@@ -261,26 +264,50 @@
          (max-published-times nil)
          (entries nil))
     current-page max-pages
-    (dolist (url urls)
-      (format t "~s~%" url)
-      (let* ((last-published-time (or (feed-setting url :last-published-time db) 0))
-             (max-published-time last-published-time)
-             (new-entries nil)
-            (rss (ignore-errors (parse-rss url))))
-        (when rss
-          (dolist (entry (entries rss))
-            (let ((published-time (published-time entry)))
-              (when (and published-time (> published-time last-published-time))
-                (push entry new-entries)
-                (when (> published-time max-published-time)
-                  (setf max-published-time published-time)))))
-          (when new-entries
-            (setf entries (merge 'list
-                                 entries
-                                 (sort new-entries #'> :key #'published-time)
-                                 #'>
-                                 :key #'published-time))
-            (push (cons url max-published-time) max-published-times)))))
+    (flet ((process-url (url)
+             (let* ((last-published-time
+                     (or (feed-setting url :last-published-time db) 0))
+                    (max-published-time last-published-time)
+                    (new-entries nil))
+               (multiple-value-bind (rss err)
+                   (ignore-errors (parse-rss url))
+                 (when rss
+                   (dolist (entry (entries rss))
+                     (let ((published-time (published-time entry)))
+                       (when (and published-time
+                                  (> published-time last-published-time))
+                         (push entry new-entries)
+                         (when (> published-time max-published-time)
+                           (setf max-published-time published-time)))))
+                   (when new-entries
+                     (setf entries
+                           (merge 'list
+                                  entries
+                                  (sort new-entries #'> :key #'published-time)
+                                  #'>
+                                  :key #'published-time))
+                     (push (cons url max-published-time) max-published-times)))
+                 (values (length new-entries) err)))))
+          (dolist (url urls)
+            (format t "~s" url)
+            (let ((done nil))
+              (unwind-protect
+                   (loop
+                      (restart-case
+                          (multiple-value-bind (cnt err) (process-url url)
+                            (unless err
+                              (format t " ~d~%" cnt)
+                              (setf done t))
+                            (return))
+                        (cancel-processing ()
+                          :report (lambda (stream)
+                                    (format stream "Cancel processing ~a" url))
+                          (return))
+                        (retry-processing ()
+                          :report (lambda (stream)
+                                    (format stream "Retry processing ~a" url)))))
+                (unless done
+                  (format t " ***ERROR***~%"))))))
     (values entries max-published-times)))
 
 (defparameter *style-rss-post-file* ".rss-post.tmpl")
@@ -408,6 +435,8 @@
 (defun aggregate-rss (&key (data-db *data-db*)
                       (site-db *site-db*)
                       (urls (rss-feedurls data-db)))
+  ;; Prevent update thread from interfering
+  (setf (rss-setting :last-update) (get-universal-time))
   (multiple-value-bind (entries max-published-time-alist)
       (get-new-rss-entries :urls urls :db data-db)
     (render-rss-pages entries :data-db data-db :site-db site-db)
@@ -433,18 +462,23 @@
       (setf *rss-reader-thread* nil))))
 
 (defun rss-reader-thread-step ()
-  (do-port-dbs (db)
-    (let ((urls (rss-feedurls db)))
-      (when urls
-        (let* ((settings (rss-settings))
-               (last-update (or (getf settings :last-update) 0))
-               (update-period (or (getf settings :update-period)
-                                  *default-rss-update-period*))
-               (next-update (+ last-update update-period)))
-          (when (>= (get-universal-time) next-update)
-            (format t "Aggregating RSS for ~s~%"
-                    (with-settings () (get-setting :site-name)))
-            (aggregate-rss :urls urls)))))))
+  (let ((did-one? nil))
+    (do-port-dbs (db)
+      (let ((urls (rss-feedurls db)))
+        (when urls
+          (let* ((settings (rss-settings))
+                 (last-update (or (getf settings :last-update) 0))
+                 (update-period (or (getf settings :update-period)
+                                    *default-rss-update-period*))
+                 (next-update (+ last-update update-period)))
+            (when (>= (get-universal-time) next-update)
+              (setf did-one? t)
+              (format t "Aggregating RSS for ~s~%"
+                      (with-settings () (get-setting :site-name)))
+              (let ((count (aggregate-rss :urls urls)))
+                (format t "~d new entries~%" count)))))))
+    (when did-one?
+      (format t "Done aggregating RSS feeds~%"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
