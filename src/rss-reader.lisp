@@ -411,7 +411,8 @@
                          :note (format nil "End of ~d saved items." total-items)
                          :data-db data-db
                          :site-db site-db))
-      (loop for i from 0 below (1- delcnt)
+      (decf oldest-page)                ;delete last off-end page
+      (loop for i from 0 below delcnt
          for alias = (rss-page-number-to-alias oldest-page)
          do
            (setf (fsdb:db-get site-db alias) nil)
