@@ -360,7 +360,8 @@
           page-number))
 
 (defun render-rss-page (page-number posts &key
-                        first-p (data-db *data-db*) (site-db *site-db*))
+                        first-p (data-db *data-db*) (site-db *site-db*)
+                        last-p note)
   (let ((oddp t))
     (loop for tail on posts
        for post = (car tail)
@@ -371,6 +372,7 @@
   (let* ((alias (rss-page-number-to-alias page-number))
          (permalink (rss-page-number-to-alias page-number t))
          (older-link (and (> page-number 1)
+                          (not last-p)
                           (rss-page-number-to-alias (1- page-number) t)))
          (newer-link (unless first-p
                        (rss-page-number-to-alias (1+ page-number) t)))
@@ -382,6 +384,7 @@
                   :post-date ,(hunchentoot:rfc-1123-date)
                   :title ,title
                   :page-title ,title
+                  :note ,note
                   :home ,(determine-home alias)
                   :permalink ,(if first-p "./" permalink)
                   :prev-url ,newer-link
@@ -396,12 +399,23 @@
          (current-page (getf settings :current-page))
          (oldest-page (or (getf settings :oldest-page) 1))
          (delcnt (- (- current-page (1- oldest-page)) max-pages)))
-    (loop for i from 0 below delcnt
-       for alias = (rss-page-number-to-alias oldest-page)
-       do
-         (setf (fsdb:db-get site-db alias) nil)
-         (incf oldest-page))
-    (setf (rss-setting :oldest-page data-db) oldest-page)))
+    (when (> delcnt 0)
+      (let ((blank-page (+ oldest-page delcnt -1))
+            (total-items (* max-pages
+                            (or (getf settings :items-per-page)
+                                *default-rss-items-per-page*))))
+        (render-rss-page blank-page nil
+                         :last-p t
+                         :note (format nil "End of ~d saved items." total-items)
+                         :data-db data-db
+                         :site-db site-db))
+      (loop for i from 0 below (1- delcnt)
+         for alias = (rss-page-number-to-alias oldest-page)
+         do
+           (setf (fsdb:db-get site-db alias) nil)
+           (incf oldest-page))
+      (incf oldest-page)                  ;skip blank page
+      (setf (rss-setting :oldest-page data-db) oldest-page))))
 
 (defun render-rss-pages (entries &key (data-db *data-db*) (site-db *site-db*))
   (unless entries
@@ -486,6 +500,7 @@
               (setf did-one? t)
               (format t "Aggregating RSS for ~s~%"
                       (with-settings () (get-setting :site-name)))
+              (format t "~a~%" (hunchentoot:rfc-1123-date))
               (let ((count (aggregate-rss :urls urls)))
                 (format t "~d new entries~%" count)))))))
     (when did-one?
