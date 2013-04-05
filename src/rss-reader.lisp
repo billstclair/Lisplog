@@ -179,7 +179,7 @@
 ;;; Database
 ;;;
 ;;; rss/
-;;;   settings     ;; (:update-period <seconds>
+;;;   settings     ;; (:updates-per-hour <integer>
 ;;;                ;;  :last-update <time>
 ;;;                ;;  :items-per-page <integer>
 ;;;                ;;  :current-page <integer>
@@ -252,7 +252,7 @@
 ;;; The aggregator
 ;;;
 
-(defparameter *default-rss-update-period* 3600) ;1 hour
+(defparameter *default-rss-updates-per-hour* 2)
 (defparameter *default-rss-items-per-page* 20)
 (defparameter *default-rss-max-pages* 50)
 
@@ -268,7 +268,8 @@
              (let* ((last-published-time
                      (or (feed-setting url :last-published-time db) 0))
                     (max-published-time last-published-time)
-                    (new-entries nil))
+                    (new-entries nil)
+                    (new-entry-cnt 0))
                (multiple-value-bind (rss err)
                    (ignore-errors (parse-rss url))
                  (when rss
@@ -280,14 +281,12 @@
                          (when (> published-time max-published-time)
                            (setf max-published-time published-time)))))
                    (when new-entries
-                     (setf entries
-                           (merge 'list
-                                  entries
-                                  (sort new-entries #'> :key #'published-time)
-                                  #'>
-                                  :key #'published-time))
+                     (setf new-entries (sort new-entries #'> :key #'published-time)
+                           new-entry-cnt (length new-entries)
+                           entries (merge 'list entries new-entries #'>
+                                          :key #'published-time))
                      (push (cons url max-published-time) max-published-times)))
-                 (values (length new-entries) err)))))
+                 (values new-entry-cnt err)))))
           (dolist (url urls)
             (format t "~s" url)
             (let ((done nil))
@@ -321,21 +320,24 @@
 (defun insert-rss-base (base body)
   (let ((replacement (format nil "\\1~a" base)))
     (setf body (cl-ppcre:regex-replace-all
-                " srcnot=(['\"]https?:)"
-                (cl-ppcre:regex-replace-all
-                 "( src=['\"])"
-                 (cl-ppcre:regex-replace-all
-                  " src=(['\"]https?:)" body " srcnot=\\1")
-                 replacement)
-                " src=\\1"))
-    (cl-ppcre:regex-replace-all
-     " hrefnot=(['\"]https?:)"
-     (cl-ppcre:regex-replace-all
-      "( href=['\"])"
-      (cl-ppcre:regex-replace-all
-       " href=(['\"]https?:)" body " hrefnot=\\1")
-      replacement)
-     " href=\\1")))
+                " src=(['\"]https?:)" body " srcnot=\\1"))
+    (setf body (cl-ppcre:regex-replace-all
+                 "( src=['\"])" body replacement))
+    (setf body (cl-ppcre:regex-replace-all
+                " srcnot=(['\"]https?:)" body " src=\\1"))
+
+    (setf body (cl-ppcre:regex-replace-all
+                " href=(['\"]mailto:)" body " hrefnot=\\1"))
+    (setf body (cl-ppcre:regex-replace-all
+                " href=(['\"]https?:)" body " hrefnot=\\1"))
+    (setf body (cl-ppcre:regex-replace-all
+                "( href=['\"])" body replacement))
+    (setf body (cl-ppcre:regex-replace-all
+                " hrefnot=(['\"]https?:)" body " href=\\1"))
+    (setf body (cl-ppcre:regex-replace-all
+                " hrefnot=(['\"]mailto:)" body " href=\\1"))
+
+    body))
 
 (defun make-rss-entry-plist (entry)
   (let* ((rss (rss entry))
@@ -461,6 +463,15 @@
             (sleep 60))
       (setf *rss-reader-thread* nil))))
 
+(defun rss-next-update (last-update updates-per-hour)
+  (multiple-value-bind (lsec lmin)
+      (decode-universal-time last-update 0)
+    (loop with minutes-per-update = (/ 60 updates-per-hour)
+       for minute from 0 by minutes-per-update
+       do
+         (when (> minute lmin)
+           (return (+ last-update (- (* minute 60) (+ (* lmin 60) lsec))))))))
+
 (defun rss-reader-thread-step ()
   (let ((did-one? nil))
     (do-port-dbs (db)
@@ -468,9 +479,9 @@
         (when urls
           (let* ((settings (rss-settings))
                  (last-update (or (getf settings :last-update) 0))
-                 (update-period (or (getf settings :update-period)
-                                    *default-rss-update-period*))
-                 (next-update (+ last-update update-period)))
+                 (updates-per-hour (or (getf settings :updates-per-hour)
+                                       *default-rss-updates-per-hour*))
+                 (next-update (rss-next-update last-update updates-per-hour)))
             (when (>= (get-universal-time) next-update)
               (setf did-one? t)
               (format t "Aggregating RSS for ~s~%"
