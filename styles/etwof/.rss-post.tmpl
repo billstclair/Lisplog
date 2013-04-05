@@ -7,7 +7,8 @@
               &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">newer</a><!-- TMPL_ELSE -->newer<!-- /TMPL_IF -->&nbsp;
               &nbsp;<a href="./" title="index">latest</a>&nbsp;
               &nbsp;<!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
-               </span>
+               </span><!-- TMPL_IF next-update --><br/>
+             Next udpate: <!-- TMPL_VAR next-update --><!-- /TMPL_IF -->
            </div><!-- TMPL_IF note -->
            <p>
              <!-- TMPL_VAR note -->

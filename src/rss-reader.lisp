@@ -361,7 +361,7 @@
 
 (defun render-rss-page (page-number posts &key
                         first-p (data-db *data-db*) (site-db *site-db*)
-                        last-p note)
+                        last-p note next-update)
   (let ((oddp t))
     (loop for tail on posts
        for post = (car tail)
@@ -385,6 +385,7 @@
                   :title ,title
                   :page-title ,title
                   :note ,note
+                  :next-update ,next-update
                   :home ,(determine-home alias)
                   :permalink ,(if first-p "./" permalink)
                   :prev-url ,newer-link
@@ -418,9 +419,6 @@
       (setf (rss-setting :oldest-page data-db) oldest-page))))
 
 (defun render-rss-pages (entries &key (data-db *data-db*) (site-db *site-db*))
-  (unless entries
-    (return-from render-rss-pages))
-
   (let* ((old-posts (rss-index data-db))
          (settings (rss-settings data-db))
          (items-per-page (or (getf settings :items-per-page)
@@ -429,9 +427,10 @@
          (all-posts (nconc (mapcar #'make-rss-entry-plist entries) old-posts))
          (post-cnt (length all-posts))
          (pages (ceiling post-cnt items-per-page))
-         (first-page-cnt (- post-cnt (* (1- pages) items-per-page)))
+         (first-page-cnt (- post-cnt (* (max 0 (1- pages)) items-per-page)))
          (first-page-posts (subseq all-posts 0 first-page-cnt))
-         (last-page (+ current-page pages -1)))
+         (last-page (+ current-page pages -1))
+         (next-update (rss-next-update :db data-db)))
     (loop for page-number from last-page downto current-page
        for page-posts = first-page-posts then (subseq posts 0 items-per-page)
        for posts = (nthcdr first-page-cnt all-posts)
@@ -439,7 +438,10 @@
        do
          (render-rss-page page-number page-posts
                           :first-p (eql page-number last-page)
-                          :data-db data-db))
+                          :next-update (and next-update
+                                            (hunchentoot:rfc-1123-date next-update))
+                          :data-db data-db)
+         (setf next-update nil))
     (cl-fad:copy-file
      (fsdb:db-filename site-db (rss-page-number-to-alias last-page))
      (fsdb:db-filename site-db (rss-page-number-to-alias "index"))
