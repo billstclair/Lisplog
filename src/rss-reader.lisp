@@ -464,7 +464,16 @@
 
 (defvar *rss-reader-thread* nil)
 
-(defun start-rss-reader-thread ()
+(defun kill-rss-reader-thread ()
+  (let ((thread *rss-reader-thread*))
+    (when thread
+      (setf *rss-reader-thread* nil)
+      (bt:destroy-thread thread)
+      thread)))
+
+(defun start-rss-reader-thread (&optional restart-p)
+  (when restart-p
+    (kill-rss-reader-thread))
   (unless *rss-reader-thread*
     (bt:make-thread #'rss-reader-thread-loop :name "RSS Reader")))
 
@@ -472,12 +481,25 @@
   (unless *rss-reader-thread* 
     (setf *rss-reader-thread* (bt:current-thread))
     (unwind-protect
-         (loop
-            (ignore-errors (rss-reader-thread-step))
-            (sleep 60))
+         (loop (rss-reader-thread-loop-body))
       (setf *rss-reader-thread* nil))))
 
-(defun rss-next-update (last-update updates-per-hour)
+(defun rss-reader-thread-loop-body ()
+  (let ((sleep-time 60))
+    (let ((next-update (ignore-errors (rss-reader-thread-step))))
+      (when next-update
+        (let ((delay (- next-update (get-universal-time))))
+          (when (< delay sleep-time)
+            (setf sleep-time (max 0 delay))))))
+    (sleep sleep-time)))
+
+(defun rss-next-update (&key last-update updates-per-hour (db *data-db*))
+  (let ((settings (rss-settings db)))
+    (unless last-update
+      (setf last-update (or (getf settings :last-update) 0)))
+    (unless updates-per-hour
+      (setf updates-per-hour (or (getf settings :updates-per-hour)
+                                 *default-rss-updates-per-hour*))))
   (multiple-value-bind (lsec lmin)
       (decode-universal-time last-update 0)
     (loop with minutes-per-update = (/ 60 updates-per-hour)
@@ -487,24 +509,25 @@
            (return (+ last-update (- (* minute 60) (+ (* lmin 60) lsec))))))))
 
 (defun rss-reader-thread-step ()
-  (let ((did-one? nil))
+  (let ((did-one? nil)
+        (min-next-update nil))
     (do-port-dbs (db)
       (let ((urls (rss-feedurls db)))
         (when urls
-          (let* ((settings (rss-settings))
-                 (last-update (or (getf settings :last-update) 0))
-                 (updates-per-hour (or (getf settings :updates-per-hour)
-                                       *default-rss-updates-per-hour*))
-                 (next-update (rss-next-update last-update updates-per-hour)))
+          (let* ((next-update (rss-next-update :db db)))
             (when (>= (get-universal-time) next-update)
               (setf did-one? t)
-              (format t "Aggregating RSS for ~s~%"
+              (format t "~%Aggregating RSS for ~s~%"
                       (with-settings () (get-setting :site-name)))
               (format t "~a~%" (hunchentoot:rfc-1123-date))
               (let ((count (aggregate-rss :urls urls)))
-                (format t "~d new entries~%" count)))))))
+                (format t "~d new entries~%" count))
+              (setf next-update (rss-next-update :db db)))
+            (when (or (null min-next-update) (< next-update min-next-update))
+              (setf min-next-update next-update))))))
     (when did-one?
-      (format t "Done aggregating RSS feeds~%"))))
+      (format t "Done aggregating RSS feeds~%"))
+    min-next-update))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
