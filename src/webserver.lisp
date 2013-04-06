@@ -1289,6 +1289,7 @@
                        title published body input-format
                        captcha-response captcha-hidden
                        preview submit delete)
+  (when (null body) (setf body ""))
   (let* ((session hunchentoot:*session*)
          (db (get-port-db))
          (site-db (with-site-db (db) *site-db*))
