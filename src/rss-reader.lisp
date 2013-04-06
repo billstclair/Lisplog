@@ -225,8 +225,12 @@
   (let* ((hash (cl-crypto:sha1 url))
          (hash-settings (feed-hash-settings hash db))
          (cell (assoc url hash-settings :test #'equal)))
-    (cond (cell (setf (cdr cell) settings))
-          (t (push (cons url settings) hash-settings)))
+    (cond (cell (cond ((null settings)
+                       (setf hash-settings (delete url hash-settings
+                                                   :test #'equal
+                                                   :key #'car)))
+                      (t (setf (cdr cell) settings))))
+          (settings (push (cons url settings) hash-settings)))
     (setf (feed-hash-settings hash db) hash-settings)
     settings))
 
@@ -442,7 +446,8 @@
                           :first-p (eql page-number last-page)
                           :next-update (and next-update
                                             (hunchentoot:rfc-1123-date next-update))
-                          :data-db data-db)
+                          :data-db data-db
+                          :site-db site-db)
          (setf next-update nil))
     (cl-fad:copy-file
      (fsdb:db-filename site-db (rss-page-number-to-alias last-page))
@@ -495,7 +500,11 @@
         (let ((delay (- next-update (get-universal-time))))
           (when (< delay sleep-time)
             (setf sleep-time (max 0 delay))))))
-    (sleep sleep-time)))
+    (restart-case
+        (sleep sleep-time)
+      (stop-sleeping ()
+        :report (lambda (stream)
+                  (format stream "stop-sleeping"))))))
 
 (defun rss-next-update (&key last-update updates-per-hour (db *data-db*))
   (let ((settings (rss-settings db)))

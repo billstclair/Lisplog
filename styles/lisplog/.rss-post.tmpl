@@ -5,10 +5,11 @@
           <p class="date">
             Rendered on <!-- TMPL_VAR post-date -->
             <span class="meta">
-              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+              &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">newer</a><!-- TMPL_ELSE -->newer<!-- /TMPL_IF -->
               <a href="./" title="index">latest</a>
-              <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
-            </span>
+              <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
+            </span><!-- TMPL_IF next-update --><br/>
+             Next udpate: <!-- TMPL_VAR next-update --><!-- /TMPL_IF -->
           </p>
           <!-- TMPL_VAR body -->
         </div>
@@ -20,6 +21,9 @@
           </h2>
           <p class="date">
             via <a href=" <!-- TMPL_VAR site-link -->"><!-- TMPL_VAR site-name --></a> by <!-- TMPL_VAR author --> on <!-- TMPL_VAR post-date -->
+            <span class="meta">
+              <a href="<!-- TMPL_VAR feed-link -->"><img src="<!-- TMPL_VAR home -->/images/xml.png"/></a>
+            </span>
           </p>
           <!-- TMPL_VAR body -->
         </div>
@@ -27,9 +31,9 @@
 
 	<div class="post">
           <p>
-            &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">&lt;==</a><!-- TMPL_ELSE -->&lt;==<!-- /TMPL_IF -->
+            &nbsp;<!-- TMPL_IF prev-url --><a href="<!-- TMPL_VAR prev-url -->" title="newer posts">newer</a><!-- TMPL_ELSE -->newer<!-- /TMPL_IF -->
             <a href="./" title="index">latest</a>
-            <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">==&gt;</a><!-- TMPL_ELSE -->==&gt;<!-- /TMPL_IF -->&nbsp;
+            <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
           </p>
           <!-- TMPL_VAR body -->
         </div>
