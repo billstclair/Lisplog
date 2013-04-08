@@ -204,6 +204,7 @@
 ;;;                           :subtitle <string>
 ;;;                           :editor <string>
 ;;;                           :link <string>
+;;;                           :image <string>
 ;;;                ;;  )
 ;;;                ;;  ...)
 ;;;   index        ;; plist to generate index.html (latest page)
@@ -235,14 +236,25 @@
 (defun (setf feed-hash-settings) (settings hash &optional (db *data-db*))
   (setf (sexp-get db $RSS/FEEDS hash :subdirs-p nil) settings))
 
-(defun feed-settings (url &optional (db *data-db*))
-  (cdr (assoc url (feed-hash-settings (cl-crypto:sha1 url) db)
-              :test #'equal)))
+(defun feed-settings (url &key
+                      (db *data-db*)
+                      hash
+                      (hash-settings nil hash-settings-p))
+  (unless hash-settings-p
+    (unless hash (setf hash (cl-crypto:sha1 url)))
+    (setf hash-settings (feed-hash-settings hash db)))
+  (values (cdr (assoc url hash-settings :test #'equal))
+          hash-settings
+          hash))
 
-(defun (setf feed-settings) (settings url &optional (db *data-db*))
-  (let* ((hash (cl-crypto:sha1 url))
-         (hash-settings (feed-hash-settings hash db))
-         (cell (assoc url hash-settings :test #'equal)))
+(defun (setf feed-settings) (settings url &key
+                             (db *data-db*)
+                             hash
+                             (hash-settings nil hash-settings-p))
+  (unless hash (setf hash (cl-crypto:sha1 url)))
+  (unless hash-settings-p
+    (setf hash-settings (feed-hash-settings hash db)))
+  (let* ((cell (assoc url hash-settings :test #'equal)))
     (cond (cell (cond ((null settings)
                        (setf hash-settings (delete url hash-settings
                                                    :test #'equal
@@ -253,10 +265,10 @@
     settings))
 
 (defun feed-setting (url key &optional (db *data-db*))
-  (getf (feed-settings url db) key))
+  (getf (feed-settings url :db db) key))
   
 (defun (setf feed-setting) (value url key &optional (db *data-db*))
-  (setf (getf (feed-settings url db) key) value))
+  (setf (getf (feed-settings url :db db) key) value))
   
 (defun rss-index (&optional (db *data-db*))
   (sexp-get db $RSS $INDEX :subdirs-p nil))
@@ -268,7 +280,7 @@
   (setf (rss-settings db) nil)
   (setf (rss-index db) nil)
   (dolist (url (rss-feedurls db))
-    (setf (feed-settings url db) nil)))
+    (setf (feed-settings url :db db) nil)))
 
 ;;;
 ;;; The aggregator
@@ -277,6 +289,23 @@
 (defparameter *default-rss-updates-per-hour* 2)
 (defparameter *default-rss-items-per-page* 20)
 (defparameter *default-rss-max-pages* 50)
+
+(defun save-rss-settings (rss &optional (db *data-db*))
+  (let* ((url (feed-link rss)))
+    (multiple-value-bind (settings hash-settings hash)
+        (feed-settings url :db db)
+      (flet ((setit (key value)
+               ;; Maybe I should just set here.
+               ;; This makes it remember deleted values.
+               (when value
+                 (setf (getf settings key) value))))
+        (setit :title (title rss))
+        (setit :subtitle (subtitle rss))
+        (setit :editor (editor rss))
+        (setit :link (link rss))
+        (setit :image (image rss)))
+      (setf (feed-settings url :db db :hash hash :hash-settings hash-settings)
+            settings))))
 
 (defun get-new-rss-entries (&key (db *data-db*)
                             (urls (rss-feedurls db)))
@@ -295,6 +324,7 @@
                (multiple-value-bind (rss err)
                    (ignore-errors (parse-rss url))
                  (when rss
+                   (save-rss-settings rss db)
                    (dolist (entry (entries rss))
                      (let ((published-time (published-time entry)))
                        (when (and published-time
@@ -383,6 +413,12 @@
           (if no-dir-p "" "aggregator/")
           page-number))
 
+(defvar *rss-default-page-title* "Feed Aggregator")
+
+(defun rss-page-title (&optional (db *data-db*))
+  (with-settings (db)
+    (or (get-setting :rss-page-title) *rss-default-page-title*)))
+
 (defun render-rss-page (page-number posts &key
                         first-p (data-db *data-db*) (site-db *site-db*)
                         last-p note next-update)
@@ -402,8 +438,9 @@
                        (rss-page-number-to-alias (1+ page-number) t)))
          (post-template-name (get-rss-post-template-name data-db))
          (title (if first-p
-                    "Feed Aggregator"
-                    (format nil "Feed Aggregator Page ~d" page-number)))
+                    (rss-page-title data-db)
+                    (format nil "~a Page ~d"
+                            (rss-page-title data-db) page-number)))
          (plist `(:posts ,posts
                   :post-date ,(hunchentoot:rfc-1123-date)
                   :title ,title
@@ -417,6 +454,26 @@
     (setf (fsdb:db-get site-db alias)
           (render-template post-template-name plist :data-db data-db))
     alias))
+
+(defun render-rss-feeds (&key (data-db *data-db*) (site-db *site-db*))
+  (let* ((urls (rss-feedurls data-db))
+         (lines (loop for hash in (fsdb:db-contents data-db $RSS $FEEDS)
+                   nconc
+                     (loop for cell in (feed-hash-settings hash data-db)
+                        for feed-url = (car cell)
+                        for plist = (cons :url cell)
+                        for last-update = (getf plist :last-update)
+                        do
+                          (when (member feed-url urls :test #'equal)
+                            (setf (getf plist :active-p) t))
+                          (setf (getf plist :last-update)
+                                (if last-update
+                                    (hunchentoot:rfc-1123-date last-update)
+                                    "never"))
+                          collect plist))))
+    ;; *** Continue here ***
+    site-db
+    lines))
 
 (defun trim-rss-pages (&optional (data-db *data-db*) (site-db *site-db*))
   (let* ((settings (rss-settings data-db))
@@ -502,8 +559,9 @@
 (defun start-rss-reader-thread (&optional restart-p)
   (when restart-p
     (kill-rss-reader-thread))
-  (unless *rss-reader-thread*
-    (bt:make-thread #'rss-reader-thread-loop :name "RSS Reader")))
+  (let ((thread *rss-reader-thread*))
+    (unless (and thread (bt:thread-alive-p thread))
+      (bt:make-thread #'rss-reader-thread-loop :name "RSS Reader"))))
 
 (defun rss-reader-thread-loop ()
   (unless *rss-reader-thread* 
