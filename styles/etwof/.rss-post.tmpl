@@ -23,7 +23,8 @@
                <a href="<!-- TMPL_VAR feed-link -->"><img src="<!-- TMPL_VAR home -->/images/xml.png"/></a>
              </span>
            </div>
-           <div class="content-item">
+           <div class="content-item"><!-- TMPL_IF image -->
+             <span class="rss-image"><img height='40px' src="<!-- TMPL_VAR image -->"/></span><!-- /TMPL_IF -->
              <!-- TMPL_VAR body -->
            </div>
 <!-- /TMPL_LOOP  -->

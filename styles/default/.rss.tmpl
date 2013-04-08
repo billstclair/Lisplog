@@ -6,7 +6,9 @@
  <link><!-- TMPL_VAR link --></link>
  <description><!-- TMPL_VAR blog-description --></description>
  <language>en</language>
- <managingEditor><!-- TMPL_VAR blog-editor --></managingEditor><!-- TMPL_LOOP items -->
+ <managingEditor><!-- TMPL_VAR blog-editor --></managingEditor>
+ <generator>Lisplog</generator><!-- TMPL_IF avatar -->
+ <avatar><!-- TMPL_VAR avatar --></avatar><!-- /TMPL_IF --><!-- TMPL_LOOP items -->
 <item>
  <title><!-- TMPL_VAR title --></title>
  <link><!-- TMPL_VAR link --></link>

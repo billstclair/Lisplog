@@ -15,6 +15,7 @@
    (updated-time :accessor updated-time :initarg :updated-time :initform nil)
    (subtitle :accessor subtitle :initarg :subtitle :initform nil)
    (editor :accessor editor :initarg :editor :initform nil)
+   (image :accessor image :initarg :image :initform nil)
    (entries :accessor entries :initarg :entries :initform nil)
    (raw-parse :accessor raw-parse :initarg :raw-parse :initform nil)))
 
@@ -87,12 +88,13 @@
                                         (listp (cdr element))
                                         element)
      for value = (car body)
+     for stringp = (stringp value)
      do
        (cond ((null tag))
               ((equal tag "channel")  ;RSS, not ATOM
                (return-from parse-rss-xml (parse-rss-xml body rss)))
               ((equal tag "title")
-               (when (stringp value)
+               (when stringp
                  (setf (title rss) value)))
               ((equal tag "link")
                (cond (attributes
@@ -102,16 +104,25 @@
                         (declare (ignore rel))
                         (when (equal type "text/html")
                           (setf (link rss) href))))
-                     ((stringp value) (setf (link rss) value))))
+                     (stringp (setf (link rss) value))))
               ((equal tag "updated")
-               (when (stringp value)
+               (when stringp
                  (setf (updated-time rss) (parse-iso8601-time value))))
               ((or (equal tag "subtitle") (equal tag "description"))
-               (when (stringp value)
+               (when stringp
                  (setf (subtitle rss) value)))
               ((equal tag "managingEditor")
-               (when (stringp value)
+               (when stringp
                  (setf (editor rss) value)))
+              ((or (equal tag "image")
+                   (and (equal tag "avatar") (not (image rss))))
+               (cond (stringp
+                      (setf (image rss) value))
+                     (t (let ((url (assoc "url" body :test #'equal)))
+                          (when (and (consp (cdr url))
+                                     (listp (cddr url))
+                                     (stringp (setf url (caddr url))))
+                            (setf (image rss) url))))))
               ((or (equal tag "entry") (equal tag "item"))
                (push (parse-rss-entry rss body) (entries rss)))))
   (setf (entries rss) (nreverse (entries rss)))
@@ -124,54 +135,55 @@
                                           (listp (cdr element))
                                           element)
        for value = (car body)
+       for stringp = (stringp value)
        do (cond ((null tag) nil)
                 ((equal tag "title")
-                 (when (stringp value)
+                 (when stringp
                    (setf (title res) value)))
                 ((equal tag "link")
                  (cond (attributes
                         (let ((href (cadr-assoc "href" attributes)))
                           (when (stringp href)
                             (setf (link res) href))))
-                       ((stringp value) (setf (link res) value))))
+                       (stringp (setf (link res) value))))
                 ((equal tag "id")
-                 (when (stringp value)
+                 (when stringp
                    (setf (id res) value)))
                 ((equal tag "published")
-                 (when (stringp value)
+                 (when stringp
                    (setf (published-time-string res) value
                          (published-time res) (parse-iso8601-time value))))
                 ((equal tag "updated")
-                 (when (stringp value)
+                 (when stringp
                    (setf (updated-time res) (parse-iso8601-time value))))
                 ((equal tag "pubDate")
-                 (when (stringp value)
+                 (when stringp
                    (setf (published-time-string res) value
                          (published-time res) (parse-rfc-1123-date value))))
                 ((equal tag "summary")
-                 (when (stringp value)
+                 (when stringp
                    (setf (summary res) value)))
                 ((equal tag "creator")
-                 (when (stringp value)
+                 (when stringp
                    (setf (author res) value)))
                 ((equal tag "author")
                  (loop for elt in body
                     for (tag attributes value) = (and (listp elt)
                                                       (listp (cdr elt))
                                                       elt)
+                    for stringp = (stringp value)
                     do
                       (cond ((null tag) attributes)
                             ((equal tag "name")
-                             (when (stringp value)
+                             (when stringp
                                (setf (author res) value)))
                             ((equal tag "uri")
-                             (when (stringp value)
+                             (when stringp
                                (setf (author-uri res) value))))))
                 ((or (equal tag "content")     ;ATOM
                      (equal tag "description") ;RSS
                      (equal tag "encoded"))    ;Wired
-                 (when (and (stringp value)
-                            (not (content res)))
+                 (when (and stringp (not (content res)))
                    (setf (content res) value)))))
     res))
 
@@ -187,7 +199,13 @@
 ;;;                ;;  :max-pages <integer>)
 ;;;   feedurls     ;; (<url> <url> ...)
 ;;;   feeds/
-;;;     <url-hash> ;; ((<url> :last-published-time <time>) ...)
+;;;     <url-hash> ;; ((<url> :last-published-time <time>
+;;;                           :title <string>
+;;;                           :subtitle <string>
+;;;                           :editor <string>
+;;;                           :link <string>
+;;;                ;;  )
+;;;                ;;  ...)
 ;;;   index        ;; plist to generate index.html (latest page)
 ;;;
 
@@ -357,6 +375,7 @@
       :site-name ,(title rss)
       :author ,(author entry)
       :post-date ,(hunchentoot:rfc-1123-date (published-time entry))
+      :image ,(image rss)
       :body ,body)))
 
 (defun rss-page-number-to-alias (page-number &optional no-dir-p)
