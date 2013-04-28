@@ -452,6 +452,13 @@ body
 		max-width:50%;
 	}
 	
+        .rss-image {
+            float: right;
+            clear: right;
+            margin-left: 3px;
+            max-height: 40px;
+        }
+
 	div.header p.meta
 	{
 		padding: .3em 1.8em;

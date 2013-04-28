@@ -455,25 +455,42 @@
           (render-template post-template-name plist :data-db data-db))
     alias))
 
+(defun rss-feeds-alias (&optional no-dir-p)
+  (format nil "~a~a"
+          (if no-dir-p "" "aggregator/")
+          "feeds.html"))
+
+(defparameter *style-rss-feeds-file* ".rss-feeds.tmpl")
+
+(defun get-rss-feeds-template-name (&optional (db *data-db*))
+  (with-settings (db)
+    (or (get-setting :rss-feeds-template) *style-rss-feeds-file*)))
+
 (defun render-rss-feeds (&key (data-db *data-db*) (site-db *site-db*))
   (let* ((urls (rss-feedurls data-db))
-         (lines (loop for hash in (fsdb:db-contents data-db $RSS $FEEDS)
-                   nconc
-                     (loop for cell in (feed-hash-settings hash data-db)
-                        for feed-url = (car cell)
-                        for plist = (cons :url cell)
-                        for last-update = (getf plist :last-update)
-                        do
-                          (when (member feed-url urls :test #'equal)
-                            (setf (getf plist :active-p) t))
-                          (setf (getf plist :last-update)
-                                (if last-update
-                                    (hunchentoot:rfc-1123-date last-update)
-                                    "never"))
-                          collect plist))))
-    ;; *** Continue here ***
-    site-db
-    lines))
+         (lines (loop for url in urls
+                   for settings = (feed-settings url :db data-db)
+                   when settings
+                   collect (let ((last-published
+                                  (getf settings :last-published-time)))
+                             (when last-published
+                               (setf (getf settings :last-published-time)
+                                     (hunchentoot:rfc-1123-date last-published)))
+                             `(:url ,url ,@settings))))
+         (feeds-template-name (get-rss-feeds-template-name data-db))
+         (title "RSS Feeds")
+         (alias (rss-feeds-alias))
+         (permalink (rss-feeds-alias t))
+         (plist `(:lines ,(sort lines #'string-lessp
+                                :key (lambda (x) (or (getf x :title) "z")))
+                  :post-date ,(hunchentoot:rfc-1123-date)
+                  :title ,title
+                  :page-title ,title
+                  :permalink ,permalink
+                  :home ,(determine-home alias))))
+    (setf (fsdb:db-get site-db alias)
+          (render-template feeds-template-name plist :data-db data-db))
+    alias))
 
 (defun trim-rss-pages (&optional (data-db *data-db*) (site-db *site-db*))
   (let* ((settings (rss-settings data-db))

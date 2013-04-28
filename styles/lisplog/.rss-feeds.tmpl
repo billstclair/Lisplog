@@ -1,0 +1,19 @@
+	<div class="post">
+          <h2>
+             <a href="<!-- TMPL_VAR permalink -->"><!-- TMPL_VAR title --></a>
+          </h2>
+          <p class="date">
+            Rendered on <!-- TMPL_VAR post-date -->
+          </p>
+          <ul><!-- TMPL_LOOP lines -->
+           <li><!-- TMPL_IF image -->
+             <!-- TMPL_IF link --><a href="<!-- TMPL_VAR link -->"><!-- /TMPL_IF --><img class="rss-image" src="<!-- TMPL_VAR image -->"/><!-- TMPL_IF link --></a><!-- /TMPL_IF --><!-- /TMPL_IF -->
+             <!-- TMPL_IF link --><a href="<!-- TMPL_VAR link -->"><!-- /TMPL_IF --><!-- TMPL_VAR title --><!-- TMPL_IF link --></a><!-- /TMPL_IF -->
+             &nbsp;&nbsp;<a href="<!-- TMPL_VAR url -->"><img src="<!-- TMPL_VAR home -->/images/xml.png"/></a><!-- TMPL_IF subtitle --><br/>
+             <!-- TMPL_VAR subtitle --><!-- /TMPL_IF --><!-- TMPL_IF editor --><br/>
+             Edited by <!-- TMPL_VAR editor --><!-- /TMPL_IF --><!-- TMPL_IF last-published-time --><br/>
+             Last update: <!-- TMPL_VAR last-published-time --><!-- /TMPL_IF -->
+           </li>
+<!-- /TMPL_LOOP -->
+          </ul>
+        </div>

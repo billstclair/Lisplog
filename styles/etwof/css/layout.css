@@ -336,3 +336,9 @@ table.prettytable caption {
 table.innertable th, table.innertable td {
   border: 0;
 }
+.rss-image {
+  float: right;
+  clear: right;
+  margin-left: 3px;
+  max-height: 40px;
+}
