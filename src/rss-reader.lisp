@@ -367,6 +367,12 @@
   (with-settings (db)
     (or (get-setting :rss-post-template) *style-rss-post-file*)))
 
+(defun rss-post-template-p (&optional (db *data-db*))
+  (let ((template-name (get-rss-post-template-name db)))
+    (and template-name
+         (get-style-file template-name db)
+         template-name)))
+
 ;; If their xml contains " srcnot='http:", we'll lose.
 ;; Let them report it as a bug.
 (defun insert-rss-base (base body)
@@ -466,7 +472,15 @@
   (with-settings (db)
     (or (get-setting :rss-feeds-template) *style-rss-feeds-file*)))
 
+(defun rss-feeds-template-p (&optional (db *data-db*))
+  (let ((template-name (get-rss-feeds-template-name db)))
+    (and template-name
+         (get-style-file template-name db)
+         template-name)))
+
 (defun render-rss-feeds (&key (data-db *data-db*) (site-db *site-db*))
+  (unless (rss-feeds-template-p data-db)
+    (return-from render-rss-feeds nil))
   (let* ((urls (rss-feedurls data-db))
          (lines (loop for url in urls
                    for settings = (feed-settings url :db data-db)
@@ -555,6 +569,8 @@
                       (urls (rss-feedurls data-db)))
   ;; Prevent update thread from interfering
   (setf (rss-setting :last-update) (get-universal-time))
+  (unless (rss-post-template-p data-db)
+    (return-from aggregate-rss 0))
   (multiple-value-bind (entries max-published-time-alist)
       (get-new-rss-entries :urls urls :db data-db)
     (render-rss-pages entries :data-db data-db :site-db site-db)
@@ -562,6 +578,8 @@
        do
          (setf (feed-setting url :last-published-time data-db) time))
     (setf (rss-setting :last-update) (get-universal-time))
+    (when (rss-feeds-template-p data-db)
+      (render-rss-feeds :data-db data-db :site-db site-db))
     (length entries)))
 
 (defvar *rss-reader-thread* nil)

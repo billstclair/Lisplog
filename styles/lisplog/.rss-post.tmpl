@@ -9,7 +9,10 @@
               <a href="./" title="index">latest</a>
               <!-- TMPL_IF next-url --><a href="<!-- TMPL_VAR next-url -->" title="older posts">older</a><!-- TMPL_ELSE -->older<!-- /TMPL_IF -->&nbsp;
             </span><!-- TMPL_IF next-update --><br/>
-             Next udpate: <!-- TMPL_VAR next-update --><!-- /TMPL_IF -->
+             Next udpate: <!-- TMPL_VAR next-update -->
+             <span class="meta">
+               <a href='feeds.html'>feeds</a>
+             </span><!-- /TMPL_IF -->
           </p>
           <!-- TMPL_VAR body -->
         </div>
