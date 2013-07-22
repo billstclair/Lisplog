@@ -185,6 +185,9 @@
                      (equal tag "encoded"))    ;Wired
                  (when (and stringp (not (content res)))
                    (setf (content res) value)))))
+    (when (and (published-time res)
+               (not (updated-time rss)))
+      (setf (updated-time rss) (published-time res)))
     res))
 
 ;;;
