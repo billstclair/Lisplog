@@ -185,10 +185,37 @@
                      (equal tag "encoded"))    ;Wired
                  (when (and stringp (not (content res)))
                    (setf (content res) value)))))
+    (unless (published-time res)
+      (determine-published-time rss res))
     (when (and (published-time res)
                (not (updated-time rss)))
       (setf (updated-time rss) (published-time res)))
     res))
+
+;; Tricks to get times for feeds without the proper fields
+;; This currently works for only the GoComics.com date in title feed
+(defun determine-published-time (rss entry)
+  (declare (ignore rss))
+  (let ((title (title entry)))
+    (when title
+      (let ((day-date-year (split-sequence:split-sequence #\, title)))
+        (when (eql 3 (length day-date-year))
+          (let ((month-day (split-sequence:split-sequence
+                            #\space (fsdb:trim (second day-date-year))))
+                (year (fsdb:trim (third day-date-year))))
+            (when (eql 2 (length month-day))
+              (let ((month (first month-day))
+                    (day (second month-day)))
+                (ignore-errors
+                  (setf month (1+ (position month *month-names*
+                                            :test #'string-equal))
+                        day (parse-integer day)
+                        year (parse-integer year))
+                  (setf (published-time-string entry)
+                        title
+                        (published-time entry)
+                        (encode-universal-time 0 0 0 day month year)))))))))))
+
 
 ;;;
 ;;; Database
@@ -571,7 +598,7 @@
                       (site-db *site-db*)
                       (urls (rss-feedurls data-db)))
   ;; Prevent update thread from interfering
-  (setf (rss-setting :last-update) (get-universal-time))
+  (setf (rss-setting :last-update data-db) (get-universal-time))
   (unless (rss-post-template-p data-db)
     (return-from aggregate-rss 0))
   (multiple-value-bind (entries max-published-time-alist)
@@ -580,7 +607,7 @@
     (loop for (url . time) in max-published-time-alist
        do
          (setf (feed-setting url :last-published-time data-db) time))
-    (setf (rss-setting :last-update) (get-universal-time))
+    (setf (rss-setting :last-update data-db) (get-universal-time))
     (when (rss-feeds-template-p data-db)
       (render-rss-feeds :data-db data-db :site-db site-db))
     (length entries)))
