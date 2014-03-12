@@ -7,11 +7,11 @@
            (load "http://beta.quicklisp.org/quicklisp.lisp")
            (funcall (find-symbol "INSTALL" :quicklisp-quickstart)))))
 
+(load "lisplog.asd")
 (ql:quickload "lisplog")
-(ql:quickload "swank")
 
 (defun ll ()
-  (swank:set-package :lisplog))
+  (in-package :lisplog))
 
 (ll)
 
@@ -19,7 +19,9 @@
 
 (defun start-swank (&optional port)
   (when port
-    (swank:create-server :port port :dont-close t)))
+    (ql:quickload "swank")
+    (funcall (find-symbol "CREATE-SERVER" :swank)
+             :port port :dont-close t)))
 
 (defun reload ()
   (ql:quickload "lisplog" :verbose t))
