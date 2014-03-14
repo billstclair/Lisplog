@@ -55,18 +55,34 @@
 (defun cadr-assoc (key list &key (test #'equal))
   (cadr (assoc key list :test test)))
 
+(defmacro with-latin-1-body-format (&body body)
+  `(call-with-latin-1-body-format
+    (lambda () ,@body)))
+
+(defun call-with-latin-1-body-format (thunk)
+  (let* ((body-format-function drakma:*body-format-function*)
+         (drakma:*body-format-function*
+          (lambda (headers external-format-in)
+            (let ((res (funcall body-format-function headers external-format-in)))
+              (if (ignore-errors   ;EXTERNAL-FORMAT type name not exported
+                    (eq (flexi-streams::external-format-name res) :utf-8))
+                  (flexi-streams:make-external-format :latin-1 :eol-style :lf)
+                  res)))))
+    (funcall thunk)))
+
 ;; This currently groks two formats:
 ;; Atom: (parse-rss "http://www.antipope.org/charlie/blog-static/atom.xml")
 ;; Simple RSS: (parse-rss "http://billstclair.com/journal/rss.xml")
 (defun parse-rss (url)
   (let* ((xml
-          (let ((s (drakma:http-request
-                    url
-                    :want-stream t
-                    :connection-timeout 5
-                    #+ccl :deadline
-                    #+ccl (+ (get-internal-real-time)
-                             (* 30 internal-time-units-per-second)))))
+          (let ((s (with-latin-1-body-format
+                     (drakma:http-request
+                      url
+                      :want-stream t
+                      :connection-timeout 5
+                      #+ccl :deadline
+                      #+ccl (+ (get-internal-real-time)
+                               (* 30 internal-time-units-per-second))))))
             (unwind-protect
                  (remove-namespaces-from-xml
                   (or (xmls:parse s) (error "Empty RSS at ~s" url)))
