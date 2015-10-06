@@ -4,7 +4,10 @@
 git submodule init
 git submodule update
 
-ccl -R 200M \
+if [ "x$CCL" = 'x' ]; then
+  CCL=ccl
+fi
+$CCL -R 200M \
     -e '(load "start.lisp")' \
     -e '(in-package :ll)' \
     -e "(start-swank $1)" \

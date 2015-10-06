@@ -449,8 +449,11 @@ as integers."
       (render-month-page y m :db data-db :site-db site-db)
       (render-year-page y :db data-db :site-db site-db))))
 
-(defun render-site (&key (db *data-db*) (site-db *site-db*) (verbose t)
+(defun render-site (&key data-dir (db *data-db*) (site-db *site-db*) (verbose t)
                     (year-and-month-pages-only-p nil))
+  (when data-dir
+    (setf db (fsdb:make-fsdb data-dir))
+    (with-site-db () (setf site-db *site-db*)))
   (let ((count 0))
     (macrolet ((rendering (form)
                  `(loop
