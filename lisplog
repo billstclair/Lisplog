@@ -8,4 +8,5 @@ ccl -R 200M \
     -e '(load "start.lisp")' \
     -e '(in-package :ll)' \
     -e "(start-swank $1)" \
-    -e "(start $2)"
+    -e "(start $2)" \
+    -e "(progn $3)"
