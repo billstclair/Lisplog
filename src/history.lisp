@@ -453,7 +453,7 @@ as integers."
                     (year-and-month-pages-only-p nil))
   (when data-dir
     (setf db (fsdb:make-fsdb data-dir))
-    (with-site-db () (setf site-db *site-db*)))
+    (with-site-db (db) (setf site-db *site-db*)))
   (let ((count 0))
     (macrolet ((rendering (form)
                  `(loop
