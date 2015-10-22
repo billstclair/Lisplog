@@ -1,7 +1,7 @@
 This is a package for maintaining a weblog, served from static files
 and modified with a lisp (Hunchentoot) server.
 
-I'm building it to replace my Drupal blog, while maintaining content,
+I built it to replace my Drupal blog, while maintaining content,
 comments, and URLs.
 
-You can check out my progress on converting my own blog at https://billstclair.com/blog-new/
+It's live at https://lisplog.org
