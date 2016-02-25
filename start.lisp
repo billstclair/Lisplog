@@ -7,7 +7,10 @@
            (load "http://beta.quicklisp.org/quicklisp.lisp")
            (funcall (find-symbol "INSTALL" :quicklisp-quickstart)))))
 
-(load "lisplog.asd")
+(defvar *lisplog-dir*
+  (directory-namestring *load-pathname*))
+
+(load (merge-pathnames "lisplog.asd" *lisplog-dir*))
 (ql:quickload "lisplog")
 
 (defun ll ()
